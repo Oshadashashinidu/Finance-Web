@@ -1,0 +1,11 @@
+{
+  "host": "",
+  "port": 587,
+  "enableSsl": true,
+  "userName": "",
+  "password": "",
+  "from": "",
+  "subject": "About Order Confirmation",
+  "purchaseActionBaseUrl": "",
+  "overrideEnv": true
+}
