@@ -31,6 +31,17 @@ async function findByBusinessRegistrationNumber(businessRegistrationNumber) {
   return result.rows[0] || null;
 }
 
+async function findByCompanyEmail(companyEmail) {
+  const pool = getPool();
+  const result = await pool.query(
+    "SELECT \"Id\", \"CompanyName\", \"CompanyEmail\", \"PasswordHash\", \"ResetCode\", \"ResetCodeExpiresAt\" " +
+      "FROM public.companies WHERE \"CompanyEmail\" = $1 LIMIT 1",
+    [companyEmail]
+  );
+
+  return result.rows[0] || null;
+}
+
 async function createCompany(company) {
   const pool = getPool();
   await pool.query(
@@ -50,9 +61,37 @@ async function createCompany(company) {
   );
 }
 
+async function updateResetCode(companyEmail, resetCode, expiresAt) {
+  const pool = getPool();
+  await pool.query(
+    "UPDATE public.companies SET \"ResetCode\" = $2, \"ResetCodeExpiresAt\" = $3 WHERE \"CompanyEmail\" = $1",
+    [companyEmail, resetCode, expiresAt]
+  );
+}
+
+async function clearResetCode(companyEmail) {
+  const pool = getPool();
+  await pool.query(
+    "UPDATE public.companies SET \"ResetCode\" = NULL, \"ResetCodeExpiresAt\" = NULL WHERE \"CompanyEmail\" = $1",
+    [companyEmail]
+  );
+}
+
+async function updatePasswordByEmail(companyEmail, passwordHash) {
+  const pool = getPool();
+  await pool.query(
+    "UPDATE public.companies SET \"PasswordHash\" = $2 WHERE \"CompanyEmail\" = $1",
+    [companyEmail, passwordHash]
+  );
+}
+
 module.exports = {
   existsByBusinessRegistrationNumber,
   existsByCompanyEmail,
   findByBusinessRegistrationNumber,
-  createCompany
+  findByCompanyEmail,
+  createCompany,
+  updateResetCode,
+  clearResetCode,
+  updatePasswordByEmail
 };

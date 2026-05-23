@@ -4,10 +4,12 @@ import {
   createRawMaterial,
   createSupplier,
   createStockIntake,
+  createStockIssue,
   createPurchaseRequest,
   fetchPurchaseRequests,
   fetchRawMaterials,
   fetchSuppliers,
+  fetchStockIssues,
   fetchStockIntakes,
   fetchSuppliersByMaterial
 } from "../api";
@@ -51,6 +53,14 @@ const initialStockForm = {
   intakeDate: ""
 };
 
+const initialIssueForm = {
+  materialId: "",
+  quantity: "",
+  unit: "kg",
+  unitPrice: "",
+  issueDate: ""
+};
+
 const initialSupplierForm = {
   supplierName: "",
   location: "",
@@ -75,11 +85,17 @@ export default function InventoryPage({ company, onLogout, onBackHome }) {
   const [savingMaterial, setSavingMaterial] = useState(false);
   const [isMaterialModalOpen, setIsMaterialModalOpen] = useState(false);
   const [stockIntakes, setStockIntakes] = useState([]);
+  const [stockFlow, setStockFlow] = useState("add");
   const [stockForm, setStockForm] = useState(initialStockForm);
   const [stockSuppliers, setStockSuppliers] = useState([]);
   const [stockStatus, setStockStatus] = useState({ type: "", message: "" });
   const [savingStock, setSavingStock] = useState(false);
   const [isStockModalOpen, setIsStockModalOpen] = useState(false);
+  const [issueStocks, setIssueStocks] = useState([]);
+  const [issueForm, setIssueForm] = useState(initialIssueForm);
+  const [issueStatus, setIssueStatus] = useState({ type: "", message: "" });
+  const [savingIssue, setSavingIssue] = useState(false);
+  const [isIssueModalOpen, setIsIssueModalOpen] = useState(false);
   const [supplierTab, setSupplierTab] = useState("suppliers");
   const [suppliers, setSuppliers] = useState([]);
   const [supplierForm, setSupplierForm] = useState(initialSupplierForm);
@@ -94,21 +110,17 @@ export default function InventoryPage({ company, onLogout, onBackHome }) {
   const [isPurchaseModalOpen, setIsPurchaseModalOpen] = useState(false);
   const [purchaseRequests, setPurchaseRequests] = useState([]);
 
+  const maxMaterialQuantity = Math.max(
+    1,
+    ...rawMaterials.map((item) => Number(item.CurrentQuantity) || 0)
+  );
+
   const refreshSuppliers = async () => {
     try {
       const response = await fetchSuppliers();
       setSuppliers(response.data || []);
     } catch (error) {
       setSupplierStatus({ type: "error", message: error.message });
-    }
-  };
-
-  const refreshPurchaseRequests = async () => {
-    try {
-      const response = await fetchPurchaseRequests();
-      setPurchaseRequests(response.data || []);
-    } catch (error) {
-      setPurchaseStatus({ type: "error", message: error.message });
     }
   };
 
@@ -130,6 +142,15 @@ export default function InventoryPage({ company, onLogout, onBackHome }) {
     }
   };
 
+  const refreshStockIssues = async () => {
+    try {
+      const response = await fetchStockIssues();
+      setIssueStocks(response.data || []);
+    } catch (error) {
+      setIssueStatus({ type: "error", message: error.message });
+    }
+  };
+
   useEffect(() => {
     if (activeSection === "raw") {
       refreshRawMaterials();
@@ -139,6 +160,7 @@ export default function InventoryPage({ company, onLogout, onBackHome }) {
   useEffect(() => {
     if (activeSection === "stock") {
       refreshStockIntakes();
+      refreshStockIssues();
       if (rawMaterials.length === 0) {
         fetchRawMaterials()
           .then((response) => setRawMaterials(response.data || []))
@@ -155,7 +177,9 @@ export default function InventoryPage({ company, onLogout, onBackHome }) {
 
   useEffect(() => {
     if (activeSection === "suppliers" && supplierTab === "purchase") {
-      refreshPurchaseRequests();
+      fetchPurchaseRequests()
+        .then((response) => setPurchaseRequests(response.data || []))
+        .catch((error) => setPurchaseStatus({ type: "error", message: error.message }));
     }
   }, [activeSection, supplierTab]);
 
@@ -166,6 +190,16 @@ export default function InventoryPage({ company, onLogout, onBackHome }) {
         .catch((error) => setPurchaseStatus({ type: "error", message: error.message }));
     }
   }, [isPurchaseModalOpen, rawMaterials.length]);
+
+  useEffect(() => {
+    if (!isIssueModalOpen || rawMaterials.length > 0) {
+      return;
+    }
+
+    fetchRawMaterials()
+      .then((response) => setRawMaterials(response.data || []))
+      .catch((error) => setIssueStatus({ type: "error", message: error.message }));
+  }, [isIssueModalOpen, rawMaterials.length]);
 
   useEffect(() => {
     if (!isPurchaseModalOpen) {
@@ -282,6 +316,59 @@ export default function InventoryPage({ company, onLogout, onBackHome }) {
     }
   };
 
+  const handleIssueChange = (event) => {
+    const { name, value } = event.target;
+    setIssueForm((prev) => ({ ...prev, [name]: value }));
+  };
+
+  const handleIssueMaterialChange = (event) => {
+    const materialId = event.target.value;
+    const selectedMaterial = rawMaterials.find((item) => item.MaterialId === materialId);
+
+    setIssueForm((prev) => ({
+      ...prev,
+      materialId,
+      unit: selectedMaterial?.Unit || "kg",
+      unitPrice: selectedMaterial?.UnitCost ?? ""
+    }));
+  };
+
+  const handleIssueSubmit = async (event) => {
+    event.preventDefault();
+    setSavingIssue(true);
+    setIssueStatus({ type: "", message: "" });
+
+    try {
+      const selectedMaterial = rawMaterials.find((item) => item.MaterialId === issueForm.materialId);
+
+      if (!selectedMaterial) {
+        throw new Error("Select a raw material.");
+      }
+
+      const payload = {
+        materialId: selectedMaterial.MaterialId,
+        materialName: selectedMaterial.MaterialName,
+        quantity: issueForm.quantity,
+        unit: issueForm.unit,
+        unitPrice: issueForm.unitPrice,
+        issueDate: issueForm.issueDate || undefined
+      };
+
+      const response = await createStockIssue(payload);
+      setIssueStocks((prev) => [response.data, ...prev]);
+      setIssueForm(initialIssueForm);
+      setIsIssueModalOpen(false);
+
+      const refreshed = await fetchRawMaterials();
+      setRawMaterials(refreshed.data || []);
+      setIssueStatus({ type: "success", message: response.message });
+    } catch (error) {
+      setIssueStatus({ type: "error", message: error.message });
+    } finally {
+      setSavingIssue(false);
+    }
+  };
+
   const handleSupplierChange = (event) => {
     const { name, value } = event.target;
     setSupplierForm((prev) => ({ ...prev, [name]: value }));
@@ -318,8 +405,12 @@ export default function InventoryPage({ company, onLogout, onBackHome }) {
   };
 
   const handlePurchaseAction = (materialName) => {
-    const selectedMaterial = rawMaterials.find((item) => item.MaterialName === materialName);
-    setPurchaseMaterialName(materialName || "");
+    const targetName = String(materialName || "").trim();
+    const selectedMaterial = rawMaterials.find(
+      (item) => String(item.MaterialName || "").toLowerCase() === targetName.toLowerCase()
+    );
+
+    setPurchaseMaterialName(targetName);
     setActiveSection("suppliers");
     setSupplierTab("purchase");
     setPurchaseStatus({ type: "", message: "" });
@@ -394,8 +485,7 @@ export default function InventoryPage({ company, onLogout, onBackHome }) {
         rawMaterialName: selectedMaterial.MaterialName,
         requestedQuantity: purchaseForm.quantity,
         unit: purchaseForm.unit,
-        notes: purchaseForm.notes,
-        companyName: company?.companyName || company?.CompanyName || ""
+        notes: purchaseForm.notes
       };
 
       const response = await createPurchaseRequest(payload);
@@ -668,6 +758,33 @@ export default function InventoryPage({ company, onLogout, onBackHome }) {
                   </div>
                 ))}
               </div>
+              <div className="material-chart">
+                <div className="chart-header">
+                  <h4>Quantity distribution</h4>
+                  <p className="muted">Current quantities by material and status.</p>
+                </div>
+                <div className="chart-bars">
+                  {rawMaterials.map((item) => {
+                    const quantity = Number(item.CurrentQuantity) || 0;
+                    const barHeight = Math.max(6, (quantity / maxMaterialQuantity) * 100);
+                    const status = String(item.Status || "OK").toLowerCase();
+
+                    return (
+                      <div key={`chart-${item.MaterialId}`} className="chart-bar">
+                        <div className="bar-track">
+                          <div
+                            className={`bar-fill ${status}`}
+                            style={{ height: `${barHeight}%` }}
+                            aria-hidden="true"
+                          />
+                        </div>
+                        <span className="bar-value">{quantity}</span>
+                        <span className="bar-label">{item.MaterialName}</span>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
             </section>
           ) : null}
 
@@ -678,35 +795,88 @@ export default function InventoryPage({ company, onLogout, onBackHome }) {
                   <h3>Stock Management</h3>
                   <p className="muted">Switch between add, issue, and waste flows.</p>
                 </div>
+                {stockFlow === "add" ? (
+                  <button
+                    className="primary"
+                    type="button"
+                    onClick={() => {
+                      setStockStatus({ type: "", message: "" });
+                      setIsStockModalOpen(true);
+                    }}
+                  >
+                    Add stock intake
+                  </button>
+                ) : stockFlow === "issue" ? (
+                  <button
+                    className="primary"
+                    type="button"
+                    onClick={() => {
+                      setIssueStatus({ type: "", message: "" });
+                      setIsIssueModalOpen(true);
+                    }}
+                  >
+                    Issue stock
+                  </button>
+                ) : null}
                 <button
-                  className="primary"
+                  className="ghost"
                   type="button"
                   onClick={() => {
-                    setStockStatus({ type: "", message: "" });
-                    setIsStockModalOpen(true);
+                    refreshStockIntakes();
+                    refreshStockIssues();
                   }}
                 >
-                  Add stock intake
-                </button>
-                <button className="ghost" type="button" onClick={refreshStockIntakes}>
                   Refresh
                 </button>
               </div>
               <div className="pill-row">
-                <button className="pill active" type="button">Add stock</button>
-                <button className="pill" type="button">Issue stock</button>
-                <button className="pill" type="button">Waste stock</button>
+                <button
+                  className={`pill ${stockFlow === "add" ? "active" : ""}`}
+                  type="button"
+                  onClick={() => setStockFlow("add")}
+                >
+                  Add stock
+                </button>
+                <button
+                  className={`pill ${stockFlow === "issue" ? "active" : ""}`}
+                  type="button"
+                  onClick={() => setStockFlow("issue")}
+                >
+                  Issue stock
+                </button>
+                <button
+                  className={`pill ${stockFlow === "waste" ? "active" : ""}`}
+                  type="button"
+                  onClick={() => setStockFlow("waste")}
+                >
+                  Waste stock
+                </button>
               </div>
-              <div className="panel-card">
-                <h4>Add Stock Intake</h4>
-                <p className="muted">Capture inbound deliveries, suppliers, and batch identifiers.</p>
-              </div>
+              {stockFlow === "add" ? (
+                <div className="panel-card">
+                  <h4>Add Stock Intake</h4>
+                  <p className="muted">Capture inbound deliveries, suppliers, and batch identifiers.</p>
+                </div>
+              ) : stockFlow === "issue" ? (
+                <div className="panel-card">
+                  <h4>Issue Stock for Production</h4>
+                  <p className="muted">Release materials for production and track consumption.</p>
+                </div>
+              ) : (
+                <div className="panel-card">
+                  <h4>Waste Stock</h4>
+                  <p className="muted">Log damaged or expired materials for accurate balances.</p>
+                </div>
+              )}
 
-              {stockStatus.message ? (
+              {stockFlow === "add" && stockStatus.message ? (
                 <div className={`alert ${stockStatus.type}`}>{stockStatus.message}</div>
               ) : null}
+              {stockFlow === "issue" && issueStatus.message ? (
+                <div className={`alert ${issueStatus.type}`}>{issueStatus.message}</div>
+              ) : null}
 
-              {isStockModalOpen ? (
+              {stockFlow === "add" && isStockModalOpen ? (
                 <div className="modal-overlay" role="dialog" aria-modal="true">
                   <div className="modal">
                     <div className="modal-header">
@@ -800,32 +970,154 @@ export default function InventoryPage({ company, onLogout, onBackHome }) {
                 </div>
               ) : null}
 
-              <div className="stock-card-grid">
-                {stockIntakes.map((intake) => (
-                  <article key={intake.IntakeId} className="stock-card">
+              {stockFlow === "issue" && isIssueModalOpen ? (
+                <div className="modal-overlay" role="dialog" aria-modal="true">
+                  <div className="modal">
+                    <div className="modal-header">
+                      <div>
+                        <h4>Issue stock</h4>
+                        <p className="muted">Issue raw materials for production.</p>
+                      </div>
+                      <button
+                        className="ghost"
+                        type="button"
+                        onClick={() => setIsIssueModalOpen(false)}
+                      >
+                        Close
+                      </button>
+                    </div>
+                    <form className="form material-form" onSubmit={handleIssueSubmit}>
+                      <label>
+                        Raw material
+                        <select
+                          name="materialId"
+                          value={issueForm.materialId}
+                          onChange={handleIssueMaterialChange}
+                          required
+                        >
+                          <option value="">Select material</option>
+                          {rawMaterials.map((material) => (
+                            <option key={material.MaterialId} value={material.MaterialId}>
+                              {material.MaterialName}
+                            </option>
+                          ))}
+                        </select>
+                      </label>
+                      <label>
+                        Quantity
+                        <input
+                          name="quantity"
+                          type="number"
+                          step="0.01"
+                          value={issueForm.quantity}
+                          onChange={handleIssueChange}
+                          required
+                        />
+                      </label>
+                      <label>
+                        Unit
+                        <input name="unit" value={issueForm.unit} onChange={handleIssueChange} />
+                      </label>
+                      <label>
+                        Unit price
+                        <input
+                          name="unitPrice"
+                          type="number"
+                          step="0.01"
+                          value={issueForm.unitPrice}
+                          onChange={handleIssueChange}
+                          required
+                        />
+                      </label>
+                      <label>
+                        Date
+                        <input
+                          name="issueDate"
+                          type="date"
+                          value={issueForm.issueDate}
+                          onChange={handleIssueChange}
+                        />
+                      </label>
+                      <div className="total-pill">
+                        <span>Auto total</span>
+                        <strong>
+                          LKR {(Number(issueForm.quantity) || 0) * (Number(issueForm.unitPrice) || 0)}
+                        </strong>
+                      </div>
+                      <button className="primary" type="submit" disabled={savingIssue}>
+                        {savingIssue ? "Saving..." : "Issue stock"}
+                      </button>
+                    </form>
+                  </div>
+                </div>
+              ) : null}
+
+              {stockFlow === "add" ? (
+                <div className="stock-card-grid">
+                  {stockIntakes.map((intake) => (
+                    <article key={intake.IntakeId} className="stock-card">
+                      <div className="stock-card-header">
+                        <div>
+                          <h4>{intake.MaterialName}</h4>
+                          <p className="muted">Supplier: {intake.SupplierName}</p>
+                        </div>
+                        <span className="muted">
+                          {intake.IntakeDate ? String(intake.IntakeDate).slice(0, 10) : ""}
+                        </span>
+                      </div>
+                      <div className="stock-card-row">
+                        <div>
+                          <p className="muted">Quantity</p>
+                          <strong>{intake.Quantity} {intake.Unit}</strong>
+                        </div>
+                        <div>
+                          <p className="muted">Unit price</p>
+                          <strong>LKR {intake.UnitPrice} / {intake.Unit}</strong>
+                        </div>
+                      </div>
+                      <span className="stock-total">LKR {intake.TotalCost}</span>
+                    </article>
+                  ))}
+                </div>
+              ) : stockFlow === "issue" ? (
+                <div className="stock-card-grid">
+                  {issueStocks.map((issue) => (
+                    <article key={issue.IssueId} className="stock-card">
+                      <div className="stock-card-header">
+                        <div>
+                          <h4>{issue.MaterialName}</h4>
+                          <p className="muted">Issued for production</p>
+                        </div>
+                        <span className="muted">
+                          {issue.IssueDate ? String(issue.IssueDate).slice(0, 10) : ""}
+                        </span>
+                      </div>
+                      <div className="stock-card-row">
+                        <div>
+                          <p className="muted">Quantity</p>
+                          <strong>{issue.Quantity} {issue.Unit}</strong>
+                        </div>
+                        <div>
+                          <p className="muted">Unit price</p>
+                          <strong>LKR {issue.UnitPrice} / {issue.Unit}</strong>
+                        </div>
+                      </div>
+                      <span className="stock-total">LKR {issue.TotalCost}</span>
+                    </article>
+                  ))}
+                </div>
+              ) : (
+                <div className="stock-card-grid">
+                  <article className="stock-card">
                     <div className="stock-card-header">
                       <div>
-                        <h4>{intake.MaterialName}</h4>
-                        <p className="muted">Supplier: {intake.SupplierName}</p>
-                      </div>
-                      <span className="muted">
-                        {intake.IntakeDate ? String(intake.IntakeDate).slice(0, 10) : ""}
-                      </span>
-                    </div>
-                    <div className="stock-card-row">
-                      <div>
-                        <p className="muted">Quantity</p>
-                        <strong>{intake.Quantity} {intake.Unit}</strong>
-                      </div>
-                      <div>
-                        <p className="muted">Unit price</p>
-                        <strong>LKR {intake.UnitPrice} / {intake.Unit}</strong>
+                        <h4>Waste stock</h4>
+                        <p className="muted">No waste records yet.</p>
                       </div>
                     </div>
-                    <span className="stock-total">LKR {intake.TotalCost}</span>
                   </article>
-                ))}
-              </div>
+                </div>
+              )}
             </section>
           ) : null}
 
@@ -852,15 +1144,9 @@ export default function InventoryPage({ company, onLogout, onBackHome }) {
                     Create purchase request
                   </button>
                 )}
-                {supplierTab === "suppliers" ? (
-                  <button className="ghost" type="button" onClick={refreshSuppliers}>
-                    Refresh
-                  </button>
-                ) : (
-                  <button className="ghost" type="button" onClick={refreshPurchaseRequests}>
-                    Refresh
-                  </button>
-                )}
+                <button className="ghost" type="button" onClick={refreshSuppliers}>
+                  Refresh
+                </button>
               </div>
               {supplierStatus.message ? (
                 <div className={`alert ${supplierStatus.type}`}>{supplierStatus.message}</div>

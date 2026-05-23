@@ -42,7 +42,6 @@ async function createPurchaseRequest(payload) {
 
   const request = {
     RequestId: uuidv4(),
-    CompanyName: payload.companyName || payload.company || "",
     SupplierId: supplier.SupplierId,
     SupplierName: supplier.SupplierName,
     SupplierLocation: supplier.Location || "",
@@ -60,7 +59,6 @@ async function createPurchaseRequest(payload) {
   await sendPurchaseRequestEmail(
     {
       ...saved,
-      CompanyName: request.CompanyName,
       actionToken: request.actionToken
     },
     supplier.Email
@@ -73,60 +71,7 @@ async function listPurchaseRequests() {
   return purchaseRequestRepository.listPurchaseRequests();
 }
 
-async function handlePurchaseAction(action, requestId, token) {
-  if (!action || !requestId || !token) {
-    throw badRequest("Missing action, requestId, or token.");
-  }
-
-  const normalizedAction = String(action).toLowerCase();
-  if (normalizedAction !== "approve" && normalizedAction !== "reject") {
-    throw badRequest("Invalid action.");
-  }
-
-  const request = await purchaseRequestRepository.getPurchaseRequestById(requestId);
-  if (!request) {
-    const error = new Error("Purchase request not found.");
-    error.status = 404;
-    throw error;
-  }
-
-  if (!request.ActionToken || String(request.ActionToken) !== String(token)) {
-    throw badRequest("Invalid token.");
-  }
-
-  if (request.TokenExpiresAt && new Date(request.TokenExpiresAt) < new Date()) {
-    throw badRequest("This action link has expired.");
-  }
-
-  const currentStatus = String(request.Status || "Pending");
-  if (currentStatus.toLowerCase() !== "pending") {
-    return {
-      ...request,
-      Status: currentStatus,
-      alreadyHandled: true
-    };
-  }
-
-  const newStatus = normalizedAction === "approve" ? "Approved" : "Rejected";
-  const feedback = `${newStatus} via email action`;
-
-  const updated = await purchaseRequestRepository.updatePurchaseRequestStatus(
-    requestId,
-    newStatus,
-    true,
-    feedback
-  );
-
-  return {
-    ...request,
-    ...updated,
-    Status: newStatus,
-    alreadyHandled: false
-  };
-}
-
 module.exports = {
   createPurchaseRequest,
-  listPurchaseRequests,
-  handlePurchaseAction
+  listPurchaseRequests
 };

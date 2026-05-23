@@ -4,7 +4,6 @@ const purchaseRequestController = require("../controllers/purchaseRequestControl
 const router = express.Router();
 
 router.get("/", purchaseRequestController.list);
-router.get("/action", purchaseRequestController.handleAction);
 router.post("/", purchaseRequestController.create);
 
 module.exports = router;

@@ -1,11 +1,11 @@
-const purchaseRequestService = require("../services/purchaseRequestService");
+const stockIssueService = require("../services/stockIssueService");
 
 async function list(req, res, next) {
   try {
-    const data = await purchaseRequestService.listPurchaseRequests();
+    const data = await stockIssueService.listStockIssues();
     res.json({
       success: true,
-      message: "Purchase requests loaded successfully.",
+      message: "Stock issues loaded successfully.",
       data
     });
   } catch (error) {
@@ -15,10 +15,10 @@ async function list(req, res, next) {
 
 async function create(req, res, next) {
   try {
-    const data = await purchaseRequestService.createPurchaseRequest(req.body);
+    const data = await stockIssueService.createStockIssue(req.body);
     res.status(201).json({
       success: true,
-      message: "Purchase request created successfully.",
+      message: "Stock issue created successfully.",
       data
     });
   } catch (error) {

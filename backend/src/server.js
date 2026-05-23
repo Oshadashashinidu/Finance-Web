@@ -6,6 +6,8 @@ const rawMaterialRoutes = require("./routes/rawMaterialRoutes");
 const stockIntakeRoutes = require("./routes/stockIntakeRoutes");
 const supplierRoutes = require("./routes/supplierRoutes");
 const purchaseRequestRoutes = require("./routes/purchaseRequestRoutes");
+const chatRoutes = require("./routes/chatRoutes");
+const stockIssueRoutes = require("./routes/stockIssueRoutes");
 
 const app = express();
 
@@ -21,6 +23,8 @@ app.use("/api/raw-materials", rawMaterialRoutes);
 app.use("/api/stock-intakes", stockIntakeRoutes);
 app.use("/api/suppliers", supplierRoutes);
 app.use("/api/purchase-requests", purchaseRequestRoutes);
+app.use("/api/chat", chatRoutes);
+app.use("/api/stock-issues", stockIssueRoutes);
 
 app.use((error, req, res, next) => {
   const status = error.status || 500;

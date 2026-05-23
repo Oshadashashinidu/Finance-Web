@@ -35,6 +35,23 @@ export async function loginCompany(payload) {
   return data;
 }
 
+export async function sendChatMessage(payload) {
+  const response = await fetch(`${API_BASE_URL}/api/chat`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json"
+    },
+    body: JSON.stringify(payload)
+  });
+
+  const data = await response.json();
+  if (!response.ok) {
+    throw new Error(data?.message || "Failed to send chat message");
+  }
+
+  return data;
+}
+
 export async function fetchRawMaterials() {
   const response = await fetch(`${API_BASE_URL}/api/raw-materials`);
   const data = await response.json();
@@ -84,6 +101,16 @@ export async function fetchStockIntakes() {
   return data;
 }
 
+export async function fetchStockIssues() {
+  const response = await fetch(`${API_BASE_URL}/api/stock-issues`);
+  const data = await response.json();
+  if (!response.ok) {
+    throw new Error(data?.message || "Failed to load stock issues");
+  }
+
+  return data;
+}
+
 export async function createStockIntake(payload) {
   const response = await fetch(`${API_BASE_URL}/api/stock-intakes`, {
     method: "POST",
@@ -96,6 +123,23 @@ export async function createStockIntake(payload) {
   const data = await response.json();
   if (!response.ok) {
     throw new Error(data?.message || "Failed to create stock intake");
+  }
+
+  return data;
+}
+
+export async function createStockIssue(payload) {
+  const response = await fetch(`${API_BASE_URL}/api/stock-issues`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json"
+    },
+    body: JSON.stringify(payload)
+  });
+
+  const data = await response.json();
+  if (!response.ok) {
+    throw new Error(data?.message || "Failed to create stock issue");
   }
 
   return data;
@@ -150,6 +194,57 @@ export async function fetchPurchaseRequests() {
   const data = await response.json();
   if (!response.ok) {
     throw new Error(data?.message || "Failed to load purchase requests");
+  }
+
+  return data;
+}
+
+export async function requestPasswordReset(payload) {
+  const response = await fetch(`${API_BASE_URL}/api/companies/forgot-password`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json"
+    },
+    body: JSON.stringify(payload)
+  });
+
+  const data = await response.json();
+  if (!response.ok) {
+    throw new Error(data?.message || "Failed to send verification code");
+  }
+
+  return data;
+}
+
+export async function verifyResetCode(payload) {
+  const response = await fetch(`${API_BASE_URL}/api/companies/verify-reset-code`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json"
+    },
+    body: JSON.stringify(payload)
+  });
+
+  const data = await response.json();
+  if (!response.ok) {
+    throw new Error(data?.message || "Invalid verification code");
+  }
+
+  return data;
+}
+
+export async function resetPassword(payload) {
+  const response = await fetch(`${API_BASE_URL}/api/companies/reset-password`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json"
+    },
+    body: JSON.stringify(payload)
+  });
+
+  const data = await response.json();
+  if (!response.ok) {
+    throw new Error(data?.message || "Failed to reset password");
   }
 
   return data;

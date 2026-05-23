@@ -1,6 +1,7 @@
 const bcrypt = require("bcryptjs");
 const { v4: uuidv4 } = require("uuid");
 const companyRepository = require("../repositories/companyRepository");
+const { sendPasswordResetEmail } = require("./emailService");
 
 function badRequest(message) {
   const error = new Error(message);
@@ -81,7 +82,79 @@ async function loginCompany(payload) {
   };
 }
 
+function generateVerificationCode() {
+  return String(Math.floor(100000 + Math.random() * 900000));
+}
+
+async function requestPasswordReset(payload) {
+  if (!payload.companyEmail) {
+    throw badRequest("companyEmail is required.");
+  }
+
+  const company = await companyRepository.findByCompanyEmail(payload.companyEmail);
+  if (!company) {
+    throw badRequest("Email is not registered.");
+  }
+
+  const code = generateVerificationCode();
+  const expiresAt = new Date(Date.now() + 10 * 60 * 1000);
+
+  await companyRepository.updateResetCode(payload.companyEmail, code, expiresAt);
+  await sendPasswordResetEmail(payload.companyEmail, code);
+
+  return { companyEmail: payload.companyEmail };
+}
+
+async function verifyResetCode(payload) {
+  if (!payload.companyEmail || !payload.code) {
+    throw badRequest("companyEmail and code are required.");
+  }
+
+  const company = await companyRepository.findByCompanyEmail(payload.companyEmail);
+  if (!company) {
+    throw badRequest("Email is not registered.");
+  }
+
+  if (!company.ResetCode || String(company.ResetCode) !== String(payload.code)) {
+    throw badRequest("Invalid verification code.");
+  }
+
+  if (company.ResetCodeExpiresAt && new Date(company.ResetCodeExpiresAt) < new Date()) {
+    throw badRequest("Verification code has expired.");
+  }
+
+  return { companyEmail: payload.companyEmail };
+}
+
+async function resetPassword(payload) {
+  if (!payload.companyEmail || !payload.code || !payload.password) {
+    throw badRequest("companyEmail, code, and password are required.");
+  }
+
+  const company = await companyRepository.findByCompanyEmail(payload.companyEmail);
+  if (!company) {
+    throw badRequest("Email is not registered.");
+  }
+
+  if (!company.ResetCode || String(company.ResetCode) !== String(payload.code)) {
+    throw badRequest("Invalid verification code.");
+  }
+
+  if (company.ResetCodeExpiresAt && new Date(company.ResetCodeExpiresAt) < new Date()) {
+    throw badRequest("Verification code has expired.");
+  }
+
+  const passwordHash = await bcrypt.hash(payload.password, 10);
+  await companyRepository.updatePasswordByEmail(payload.companyEmail, passwordHash);
+  await companyRepository.clearResetCode(payload.companyEmail);
+
+  return { companyEmail: payload.companyEmail };
+}
+
 module.exports = {
   registerCompany,
-  loginCompany
+  loginCompany,
+  requestPasswordReset,
+  verifyResetCode,
+  resetPassword
 };

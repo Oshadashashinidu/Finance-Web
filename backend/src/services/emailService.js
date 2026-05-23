@@ -84,6 +84,43 @@ async function sendPurchaseRequestEmail(request, supplierEmail) {
   });
 }
 
+async function sendPasswordResetEmail(email, code) {
+  const config = loadEmailConfig();
+  const secure = Boolean(config.enableSsl && Number(config.port) === 465);
+  const transporter = nodemailer.createTransport({
+    host: config.host,
+    port: Number(config.port) || 587,
+    secure,
+    auth: {
+      user: config.userName,
+      pass: config.password
+    },
+    requireTLS: Boolean(config.enableSsl && Number(config.port) !== 465)
+  });
+
+  const subject = "Password reset verification code";
+  const text = `Your verification code is ${code}. This code expires in 10 minutes.`;
+  const html = `
+    <div style="font-family: Arial, sans-serif; color: #0f172a;">
+      <h2 style="margin: 0 0 8px;">Password reset verification</h2>
+      <p style="margin: 0 0 12px; color: #475569;">Use the code below to reset your password.</p>
+      <div style="font-size: 24px; font-weight: 700; letter-spacing: 4px; padding: 12px 16px; background: #f1f5f9; border-radius: 12px; width: fit-content;">
+        ${code}
+      </div>
+      <p style="margin: 12px 0 0; color: #475569;">This code expires in 10 minutes.</p>
+    </div>
+  `;
+
+  await transporter.sendMail({
+    from: config.from,
+    to: email,
+    subject,
+    text,
+    html
+  });
+}
+
 module.exports = {
-  sendPurchaseRequestEmail
+  sendPurchaseRequestEmail,
+  sendPasswordResetEmail
 };
