@@ -32,6 +32,32 @@ function computeStatus(currentQuantity, reorderLevel) {
   return "Low";
 }
 
+async function getFifoTotals(materialId, client) {
+  const result = await client.query(
+    "SELECT COALESCE(SUM(\"RemainingQuantity\"), 0) AS total_quantity, " +
+      "COALESCE(SUM(\"RemainingQuantity\" * \"UnitPrice\"), 0) AS total_cost " +
+      "FROM public.fifo WHERE \"MaterialId\" = $1",
+    [materialId]
+  );
+
+  const row = result.rows[0] || {};
+  return {
+    totalQuantity: Number(row.total_quantity) || 0,
+    totalCost: Number(row.total_cost) || 0
+  };
+}
+
+async function getFifoRows(materialId, client) {
+  const result = await client.query(
+    "SELECT \"FifoId\", \"RemainingQuantity\", \"UnitPrice\" " +
+      "FROM public.fifo WHERE \"MaterialId\" = $1 " +
+      "ORDER BY \"IntakeDate\" ASC, \"CreatedAt\" ASC, \"FifoId\" ASC FOR UPDATE",
+    [materialId]
+  );
+
+  return result.rows;
+}
+
 async function listStockIssues() {
   return stockIssueRepository.listStockIssues();
 }
@@ -42,9 +68,8 @@ async function createStockIssue(payload) {
   }
 
   const quantity = toNumber(payload.quantity, 0);
-  const unitPrice = toNumber(payload.unitPrice, 0);
-  if (quantity <= 0 || unitPrice < 0) {
-    throw badRequest("quantity and unitPrice must be valid numbers.");
+  if (quantity <= 0) {
+    throw badRequest("quantity must be a valid number.");
   }
 
   const pool = getPool();
@@ -58,27 +83,60 @@ async function createStockIssue(payload) {
       throw badRequest("Raw material not found.");
     }
 
-    const currentQuantity = Number(existing.CurrentQuantity) || 0;
-    if (quantity > currentQuantity) {
+    const fifoTotals = await getFifoTotals(payload.materialId, client);
+    if (quantity > fifoTotals.totalQuantity) {
       throw badRequest("Issue quantity exceeds available stock.");
     }
 
     const unit = payload.unit || existing.Unit || "kg";
-    const totalCost = quantity * unitPrice;
     const issueDate = payload.issueDate ? new Date(payload.issueDate) : new Date();
 
-    const nextQuantity = currentQuantity - quantity;
-    const nextTotalCost = Math.max(0, Number(existing.TotalCost) - totalCost);
-    const nextUnitCost = nextQuantity > 0 ? nextTotalCost / nextQuantity : 0;
-    const nextStatus = computeStatus(nextQuantity, Number(existing.ReorderLevel));
+    const fifoRows = await getFifoRows(payload.materialId, client);
+    let remainingToIssue = quantity;
+    let totalCost = 0;
+
+    for (const row of fifoRows) {
+      if (remainingToIssue <= 0) {
+        break;
+      }
+
+      const available = Number(row.RemainingQuantity) || 0;
+      if (available <= 0) {
+        continue;
+      }
+
+      const used = Math.min(available, remainingToIssue);
+      const nextRemaining = available - used;
+      totalCost += used * (Number(row.UnitPrice) || 0);
+      remainingToIssue -= used;
+
+      if (nextRemaining <= 0) {
+        await client.query("DELETE FROM public.fifo WHERE \"FifoId\" = $1", [row.FifoId]);
+      } else {
+        await client.query(
+          "UPDATE public.fifo SET \"RemainingQuantity\" = $2 WHERE \"FifoId\" = $1",
+          [row.FifoId, nextRemaining]
+        );
+      }
+    }
+
+    if (remainingToIssue > 0) {
+      throw badRequest("Issue quantity exceeds available stock.");
+    }
+
+    const updatedTotals = await getFifoTotals(payload.materialId, client);
+    const nextUnitCost = updatedTotals.totalQuantity > 0
+      ? updatedTotals.totalCost / updatedTotals.totalQuantity
+      : 0;
+    const nextStatus = computeStatus(updatedTotals.totalQuantity, Number(existing.ReorderLevel));
 
     await rawMaterialRepository.updateRawMaterialTotals(
       {
         materialId: payload.materialId,
-        currentQuantity: nextQuantity,
+        currentQuantity: updatedTotals.totalQuantity,
         unit,
         unitCost: nextUnitCost,
-        totalCost: nextTotalCost,
+        totalCost: updatedTotals.totalCost,
         status: nextStatus
       },
       client
@@ -95,7 +153,7 @@ async function createStockIssue(payload) {
         payload.materialName || existing.MaterialName,
         quantity,
         unit,
-        unitPrice,
+        0,
         totalCost,
         issueDate
       ]
@@ -109,7 +167,7 @@ async function createStockIssue(payload) {
       MaterialName: payload.materialName || existing.MaterialName,
       Quantity: quantity,
       Unit: unit,
-      UnitPrice: unitPrice,
+      UnitPrice: 0,
       TotalCost: totalCost,
       IssueDate: issueDate.toISOString()
     };

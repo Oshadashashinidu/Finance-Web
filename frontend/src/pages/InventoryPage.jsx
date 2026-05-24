@@ -11,7 +11,8 @@ import {
   fetchSuppliers,
   fetchStockIssues,
   fetchStockIntakes,
-  fetchSuppliersByMaterial
+  fetchSuppliersByMaterial,
+  fetchFifoByMaterial
 } from "../api";
 
 const SUMMARY_CARDS = [
@@ -57,7 +58,6 @@ const initialIssueForm = {
   materialId: "",
   quantity: "",
   unit: "kg",
-  unitPrice: "",
   issueDate: ""
 };
 
@@ -93,6 +93,9 @@ export default function InventoryPage({ company, onLogout, onBackHome }) {
   const [isStockModalOpen, setIsStockModalOpen] = useState(false);
   const [issueStocks, setIssueStocks] = useState([]);
   const [issueForm, setIssueForm] = useState(initialIssueForm);
+  const [fifoRows, setFifoRows] = useState([]);
+  const [fifoPreview, setFifoPreview] = useState({ totalCost: 0, available: 0, shortage: 0 });
+  const [showIssueBreakdown, setShowIssueBreakdown] = useState(false);
   const [issueStatus, setIssueStatus] = useState({ type: "", message: "" });
   const [savingIssue, setSavingIssue] = useState(false);
   const [isIssueModalOpen, setIsIssueModalOpen] = useState(false);
@@ -109,6 +112,9 @@ export default function InventoryPage({ company, onLogout, onBackHome }) {
   const [savingPurchase, setSavingPurchase] = useState(false);
   const [isPurchaseModalOpen, setIsPurchaseModalOpen] = useState(false);
   const [purchaseRequests, setPurchaseRequests] = useState([]);
+  const [expandedMaterialId, setExpandedMaterialId] = useState(null);
+  const [materialFifoMap, setMaterialFifoMap] = useState({});
+  const [materialFifoLoading, setMaterialFifoLoading] = useState({});
 
   const maxMaterialQuantity = Math.max(
     1,
@@ -149,6 +155,60 @@ export default function InventoryPage({ company, onLogout, onBackHome }) {
     } catch (error) {
       setIssueStatus({ type: "error", message: error.message });
     }
+  };
+
+  const computeFifoPreview = (rows, requestedQuantity) => {
+    const target = Number(requestedQuantity) || 0;
+    let remaining = target;
+    let totalCost = 0;
+    let available = 0;
+
+    rows.forEach((row) => {
+      const remainingQty = Number(row.RemainingQuantity) || 0;
+      const unitPrice = Number(row.UnitPrice) || 0;
+      available += remainingQty;
+
+      if (remaining > 0 && remainingQty > 0) {
+        const used = Math.min(remainingQty, remaining);
+        totalCost += used * unitPrice;
+        remaining -= used;
+      }
+    });
+
+    return {
+      totalCost,
+      available,
+      shortage: Math.max(0, target - available)
+    };
+  };
+
+  const computeFifoBreakdown = (rows, requestedQuantity) => {
+    const target = Number(requestedQuantity) || 0;
+    let remaining = target;
+    const breakdown = [];
+
+    rows.forEach((row) => {
+      if (remaining <= 0) {
+        return;
+      }
+
+      const remainingQty = Number(row.RemainingQuantity) || 0;
+      const unitPrice = Number(row.UnitPrice) || 0;
+      if (remainingQty <= 0) {
+        return;
+      }
+
+      const used = Math.min(remainingQty, remaining);
+      breakdown.push({
+        intakeDate: row.IntakeDate,
+        used,
+        unitPrice,
+        lineTotal: used * unitPrice
+      });
+      remaining -= used;
+    });
+
+    return { breakdown, remaining };
   };
 
   useEffect(() => {
@@ -328,9 +388,23 @@ export default function InventoryPage({ company, onLogout, onBackHome }) {
     setIssueForm((prev) => ({
       ...prev,
       materialId,
-      unit: selectedMaterial?.Unit || "kg",
-      unitPrice: selectedMaterial?.UnitCost ?? ""
+      unit: selectedMaterial?.Unit || "kg"
     }));
+
+    if (!materialId) {
+      setFifoRows([]);
+      setFifoPreview({ totalCost: 0, available: 0, shortage: 0 });
+      setShowIssueBreakdown(false);
+      return;
+    }
+
+    fetchFifoByMaterial(materialId)
+      .then((response) => {
+        const rows = response.data || [];
+        setFifoRows(rows);
+        setFifoPreview(computeFifoPreview(rows, issueForm.quantity));
+      })
+      .catch((error) => setIssueStatus({ type: "error", message: error.message }));
   };
 
   const handleIssueSubmit = async (event) => {
@@ -350,7 +424,6 @@ export default function InventoryPage({ company, onLogout, onBackHome }) {
         materialName: selectedMaterial.MaterialName,
         quantity: issueForm.quantity,
         unit: issueForm.unit,
-        unitPrice: issueForm.unitPrice,
         issueDate: issueForm.issueDate || undefined
       };
 
@@ -358,6 +431,9 @@ export default function InventoryPage({ company, onLogout, onBackHome }) {
       setIssueStocks((prev) => [response.data, ...prev]);
       setIssueForm(initialIssueForm);
       setIsIssueModalOpen(false);
+      setFifoRows([]);
+      setFifoPreview({ totalCost: 0, available: 0, shortage: 0 });
+      setShowIssueBreakdown(false);
 
       const refreshed = await fetchRawMaterials();
       setRawMaterials(refreshed.data || []);
@@ -368,6 +444,14 @@ export default function InventoryPage({ company, onLogout, onBackHome }) {
       setSavingIssue(false);
     }
   };
+
+  useEffect(() => {
+    if (!isIssueModalOpen) {
+      return;
+    }
+
+    setFifoPreview(computeFifoPreview(fifoRows, issueForm.quantity));
+  }, [isIssueModalOpen, fifoRows, issueForm.quantity]);
 
   const handleSupplierChange = (event) => {
     const { name, value } = event.target;
@@ -499,6 +583,34 @@ export default function InventoryPage({ company, onLogout, onBackHome }) {
       setPurchaseStatus({ type: "error", message: error.message });
     } finally {
       setSavingPurchase(false);
+    }
+  };
+
+  const loadMaterialFifo = async (materialId) => {
+    if (!materialId) {
+      return;
+    }
+
+    if (materialFifoMap[materialId]) {
+      return;
+    }
+
+    setMaterialFifoLoading((prev) => ({ ...prev, [materialId]: true }));
+    try {
+      const response = await fetchFifoByMaterial(materialId);
+      setMaterialFifoMap((prev) => ({ ...prev, [materialId]: response.data || [] }));
+    } catch (error) {
+      setMaterialStatus({ type: "error", message: error.message });
+    } finally {
+      setMaterialFifoLoading((prev) => ({ ...prev, [materialId]: false }));
+    }
+  };
+
+  const toggleMaterialDetails = async (materialId) => {
+    const nextId = expandedMaterialId === materialId ? null : materialId;
+    setExpandedMaterialId(nextId);
+    if (nextId) {
+      await loadMaterialFifo(nextId);
     }
   };
 
@@ -723,7 +835,7 @@ export default function InventoryPage({ company, onLogout, onBackHome }) {
                 </div>
               ) : null}
 
-              <div className="table">
+              <div className="table raw-table">
                 <div className="table-row header seven">
                   <span>Material</span>
                   <span>Reorder level</span>
@@ -734,27 +846,92 @@ export default function InventoryPage({ company, onLogout, onBackHome }) {
                   <span>Action</span>
                 </div>
                 {rawMaterials.map((item) => (
-                  <div key={item.MaterialId} className="table-row seven">
-                    <span>{item.MaterialName}</span>
-                    <span>{item.ReorderLevel}</span>
-                    <span>{item.CurrentQuantity}</span>
-                    <span>{item.Unit}</span>
-                    <span>{item.TotalCost}</span>
-                    <span className={`status-pill ${String(item.Status || "OK").toLowerCase()}`}>
-                      {item.Status || "OK"}
-                    </span>
-                    {(String(item.Status || "OK").toLowerCase() === "low" ||
-                      String(item.Status || "OK").toLowerCase() === "equal") ? (
-                      <button
-                        className="ghost action-button"
-                        type="button"
-                        onClick={() => handlePurchaseAction(item.MaterialName)}
-                      >
-                        Order
-                      </button>
-                    ) : (
-                      <span className="muted">-</span>
-                    )}
+                  <div key={item.MaterialId}>
+                    <div className="table-row seven">
+                      <span>{item.MaterialName}</span>
+                      <span>{item.ReorderLevel}</span>
+                      <span>{item.CurrentQuantity}</span>
+                      <span>{item.Unit}</span>
+                      <span>{item.TotalCost}</span>
+                      <span className={`status-pill ${String(item.Status || "OK").toLowerCase()}`}>
+                        {item.Status || "OK"}
+                      </span>
+                      <div className="row-actions">
+                        <button
+                          className="ghost action-button"
+                          type="button"
+                          onClick={() => toggleMaterialDetails(item.MaterialId)}
+                          aria-expanded={expandedMaterialId === item.MaterialId}
+                        >
+                          {expandedMaterialId === item.MaterialId ? "Hide" : "Details"}
+                        </button>
+                        {(String(item.Status || "OK").toLowerCase() === "low" ||
+                          String(item.Status || "OK").toLowerCase() === "equal") ? (
+                          <button
+                            className="ghost action-button"
+                            type="button"
+                            onClick={() => handlePurchaseAction(item.MaterialName)}
+                          >
+                            Order
+                          </button>
+                        ) : null}
+                      </div>
+                    </div>
+                    {expandedMaterialId === item.MaterialId ? (
+                      <div className="table-row-details">
+                        <div className="details-header">
+                          <div>
+                            <strong>Intake breakdown</strong>
+                            <p className="muted">
+                              FIFO remaining batches and how totals are derived.
+                            </p>
+                          </div>
+                          <div className="details-totals">
+                            <span>
+                              Qty: {materialFifoMap[item.MaterialId]
+                                ? materialFifoMap[item.MaterialId].reduce(
+                                  (sum, row) => sum + (Number(row.RemainingQuantity) || 0),
+                                  0
+                                ).toFixed(2)
+                                : "0.00"}
+                            </span>
+                            <span>
+                              Total: LKR {materialFifoMap[item.MaterialId]
+                                ? materialFifoMap[item.MaterialId].reduce(
+                                  (sum, row) => sum +
+                                    (Number(row.RemainingQuantity) || 0) * (Number(row.UnitPrice) || 0),
+                                  0
+                                ).toFixed(2)
+                                : "0.00"}
+                            </span>
+                          </div>
+                        </div>
+                        {materialFifoLoading[item.MaterialId] ? (
+                          <p className="muted">Loading intake rows...</p>
+                        ) : materialFifoMap[item.MaterialId]?.length ? (
+                          <div className="intake-rows">
+                            {materialFifoMap[item.MaterialId].map((row) => (
+                              <div key={row.FifoId} className="intake-row">
+                                <span className="intake-date">
+                                  {row.IntakeDate ? String(row.IntakeDate).slice(0, 10) : ""}
+                                </span>
+                                <span className="intake-qty">
+                                  {row.RemainingQuantity} {row.Unit}
+                                </span>
+                                <span className="intake-price">
+                                  LKR {Number(row.UnitPrice).toFixed(2)}
+                                </span>
+                                <span className="intake-total">
+                                  LKR {(Number(row.RemainingQuantity) * Number(row.UnitPrice)).toFixed(2)}
+                                </span>
+                              </div>
+                            ))}
+                          </div>
+                        ) : (
+                          <p className="muted">No intake rows available.</p>
+                        )}
+                      </div>
+                    ) : null}
                   </div>
                 ))}
               </div>
@@ -1019,17 +1196,6 @@ export default function InventoryPage({ company, onLogout, onBackHome }) {
                         <input name="unit" value={issueForm.unit} onChange={handleIssueChange} />
                       </label>
                       <label>
-                        Unit price
-                        <input
-                          name="unitPrice"
-                          type="number"
-                          step="0.01"
-                          value={issueForm.unitPrice}
-                          onChange={handleIssueChange}
-                          required
-                        />
-                      </label>
-                      <label>
                         Date
                         <input
                           name="issueDate"
@@ -1038,12 +1204,50 @@ export default function InventoryPage({ company, onLogout, onBackHome }) {
                           onChange={handleIssueChange}
                         />
                       </label>
-                      <div className="total-pill">
+                      <button
+                        className="total-pill"
+                        type="button"
+                        onClick={() => setShowIssueBreakdown((prev) => !prev)}
+                        aria-expanded={showIssueBreakdown}
+                      >
                         <span>Auto total</span>
-                        <strong>
-                          LKR {(Number(issueForm.quantity) || 0) * (Number(issueForm.unitPrice) || 0)}
-                        </strong>
-                      </div>
+                        {fifoPreview.shortage > 0 ? (
+                          <strong>Insufficient stock</strong>
+                        ) : (
+                          <strong>LKR {fifoPreview.totalCost.toFixed(2)}</strong>
+                        )}
+                      </button>
+                      {showIssueBreakdown && fifoPreview.shortage === 0 ? (() => {
+                        const { breakdown, remaining } = computeFifoBreakdown(
+                          fifoRows,
+                          issueForm.quantity
+                        );
+                        return (
+                          <div className="fifo-breakdown">
+                            <p className="muted">FIFO breakdown</p>
+                            {breakdown.length === 0 ? (
+                              <p className="muted">No intake rows available.</p>
+                            ) : (
+                              <div className="fifo-rows">
+                                {breakdown.map((row, index) => (
+                                  <div key={`fifo-${index}`} className="fifo-row">
+                                    <span className="fifo-date">
+                                      {row.intakeDate ? String(row.intakeDate).slice(0, 10) : ""}
+                                    </span>
+                                    <span className="fifo-math">
+                                      {row.used} x LKR {row.unitPrice.toFixed(2)}
+                                    </span>
+                                    <span className="fifo-total">LKR {row.lineTotal.toFixed(2)}</span>
+                                  </div>
+                                ))}
+                              </div>
+                            )}
+                            {remaining > 0 ? (
+                              <p className="muted">Shortage: {remaining}</p>
+                            ) : null}
+                          </div>
+                        );
+                      })() : null}
                       <button className="primary" type="submit" disabled={savingIssue}>
                         {savingIssue ? "Saving..." : "Issue stock"}
                       </button>
@@ -1096,10 +1300,6 @@ export default function InventoryPage({ company, onLogout, onBackHome }) {
                         <div>
                           <p className="muted">Quantity</p>
                           <strong>{issue.Quantity} {issue.Unit}</strong>
-                        </div>
-                        <div>
-                          <p className="muted">Unit price</p>
-                          <strong>LKR {issue.UnitPrice} / {issue.Unit}</strong>
                         </div>
                       </div>
                       <span className="stock-total">LKR {issue.TotalCost}</span>

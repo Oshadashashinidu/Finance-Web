@@ -111,6 +111,16 @@ export async function fetchStockIssues() {
   return data;
 }
 
+export async function fetchFifoByMaterial(materialId) {
+  const response = await fetch(`${API_BASE_URL}/api/fifo?materialId=${encodeURIComponent(materialId)}`);
+  const data = await response.json();
+  if (!response.ok) {
+    throw new Error(data?.message || "Failed to load FIFO entries");
+  }
+
+  return data;
+}
+
 export async function createStockIntake(payload) {
   const response = await fetch(`${API_BASE_URL}/api/stock-intakes`, {
     method: "POST",

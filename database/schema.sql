@@ -20,10 +20,26 @@ CREATE TABLE public.companies (
   TaxIdentificationNumber text,
   CompanyEmail text NOT NULL UNIQUE,
   PasswordHash text NOT NULL,
+  CreatedAt timestamp with time zone NOT NULL DEFAULT now(),
   ResetCode text,
   ResetCodeExpiresAt timestamp with time zone,
-  CreatedAt timestamp with time zone NOT NULL DEFAULT now(),
   CONSTRAINT companies_pkey PRIMARY KEY (Id)
+);
+CREATE TABLE public.fifo (
+  FifoId text NOT NULL,
+  IntakeId text NOT NULL,
+  MaterialId text NOT NULL,
+  MaterialName text NOT NULL,
+  Quantity numeric NOT NULL DEFAULT 0,
+  RemainingQuantity numeric NOT NULL DEFAULT 0,
+  Unit text NOT NULL DEFAULT 'kg'::text,
+  UnitPrice numeric NOT NULL DEFAULT 0,
+  TotalCost numeric NOT NULL DEFAULT 0,
+  IntakeDate timestamp with time zone NOT NULL DEFAULT now(),
+  CreatedAt timestamp with time zone NOT NULL DEFAULT now(),
+  CONSTRAINT fifo_pkey PRIMARY KEY (FifoId),
+  CONSTRAINT fifo_intakeid_fkey FOREIGN KEY (IntakeId) REFERENCES public.stock_intakes(IntakeId),
+  CONSTRAINT fifo_materialid_fkey FOREIGN KEY (MaterialId) REFERENCES public.raw_materials(MaterialId)
 );
 CREATE TABLE public.product_material_requirements (
   RequirementId text NOT NULL,
@@ -93,6 +109,22 @@ CREATE TABLE public.stock_intakes (
   CONSTRAINT stock_intakes_MaterialId_fkey FOREIGN KEY (MaterialId) REFERENCES public.raw_materials(MaterialId),
   CONSTRAINT stock_intakes_SupplierId_fkey FOREIGN KEY (SupplierId) REFERENCES public.suppliers(SupplierId)
 );
+CREATE TABLE public.fifo (
+  "FifoId" text NOT NULL,
+  "IntakeId" text NOT NULL,
+  "MaterialId" text NOT NULL,
+  "MaterialName" text NOT NULL,
+  "Quantity" numeric NOT NULL DEFAULT 0,
+  "RemainingQuantity" numeric NOT NULL DEFAULT 0,
+  "Unit" text NOT NULL DEFAULT 'kg'::text,
+  "UnitPrice" numeric NOT NULL DEFAULT 0,
+  "TotalCost" numeric NOT NULL DEFAULT 0,
+  "IntakeDate" timestamp with time zone NOT NULL DEFAULT now(),
+  "CreatedAt" timestamp with time zone NOT NULL DEFAULT now(),
+  CONSTRAINT fifo_pkey PRIMARY KEY ("FifoId"),
+  CONSTRAINT fifo_IntakeId_fkey FOREIGN KEY ("IntakeId") REFERENCES public.stock_intakes("IntakeId"),
+  CONSTRAINT fifo_MaterialId_fkey FOREIGN KEY ("MaterialId") REFERENCES public.raw_materials("MaterialId")
+);
 CREATE TABLE public.stock_issues (
   IssueId text NOT NULL,
   MaterialId text NOT NULL,
@@ -104,7 +136,7 @@ CREATE TABLE public.stock_issues (
   IssueDate timestamp with time zone NOT NULL DEFAULT now(),
   CreatedAt timestamp with time zone NOT NULL DEFAULT now(),
   CONSTRAINT stock_issues_pkey PRIMARY KEY (IssueId),
-  CONSTRAINT stock_issues_MaterialId_fkey FOREIGN KEY (MaterialId) REFERENCES public.raw_materials(MaterialId)
+  CONSTRAINT stock_issues_materialid_fkey FOREIGN KEY (MaterialId) REFERENCES public.raw_materials(MaterialId)
 );
 CREATE TABLE public.supplier_materials (
   MaterialLinkId text NOT NULL,

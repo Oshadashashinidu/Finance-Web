@@ -31,6 +31,21 @@ function computeStatus(currentQuantity, reorderLevel) {
   return "Low";
 }
 
+async function getFifoTotals(materialId, client) {
+  const result = await client.query(
+    "SELECT COALESCE(SUM(\"RemainingQuantity\"), 0) AS total_quantity, " +
+      "COALESCE(SUM(\"RemainingQuantity\" * \"UnitPrice\"), 0) AS total_cost " +
+      "FROM public.fifo WHERE \"MaterialId\" = $1",
+    [materialId]
+  );
+
+  const row = result.rows[0] || {};
+  return {
+    totalQuantity: Number(row.total_quantity) || 0,
+    totalCost: Number(row.total_cost) || 0
+  };
+}
+
 async function listStockIntakes() {
   const pool = getPool();
   const result = await pool.query(
@@ -73,23 +88,6 @@ async function createStockIntake(payload) {
       throw badRequest("Raw material not found.");
     }
 
-    const nextQuantity = Number(existing.CurrentQuantity) + quantity;
-    const nextTotalCost = Number(existing.TotalCost) + totalCost;
-    const nextUnitCost = nextQuantity > 0 ? nextTotalCost / nextQuantity : 0;
-    const nextStatus = computeStatus(nextQuantity, Number(existing.ReorderLevel));
-
-    await rawMaterialRepository.updateRawMaterialTotals(
-      {
-        materialId: payload.materialId,
-        currentQuantity: nextQuantity,
-        unit,
-        unitCost: nextUnitCost,
-        totalCost: nextTotalCost,
-        status: nextStatus
-      },
-      client
-    );
-
     const intakeId = uuidv4();
     await client.query(
       "INSERT INTO public.stock_intakes (\"IntakeId\", \"MaterialId\", \"MaterialName\", \"SupplierId\", " +
@@ -107,6 +105,41 @@ async function createStockIntake(payload) {
         totalCost,
         intakeDate
       ]
+    );
+
+    const fifoId = uuidv4();
+    await client.query(
+      "INSERT INTO public.fifo (\"FifoId\", \"IntakeId\", \"MaterialId\", \"MaterialName\", \"Quantity\", " +
+        "\"RemainingQuantity\", \"Unit\", \"UnitPrice\", \"TotalCost\", \"IntakeDate\") " +
+        "VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)",
+      [
+        fifoId,
+        intakeId,
+        payload.materialId,
+        payload.materialName,
+        quantity,
+        quantity,
+        unit,
+        unitPrice,
+        totalCost,
+        intakeDate
+      ]
+    );
+
+    const totals = await getFifoTotals(payload.materialId, client);
+    const nextUnitCost = totals.totalQuantity > 0 ? totals.totalCost / totals.totalQuantity : 0;
+    const nextStatus = computeStatus(totals.totalQuantity, Number(existing.ReorderLevel));
+
+    await rawMaterialRepository.updateRawMaterialTotals(
+      {
+        materialId: payload.materialId,
+        currentQuantity: totals.totalQuantity,
+        unit,
+        unitCost: nextUnitCost,
+        totalCost: totals.totalCost,
+        status: nextStatus
+      },
+      client
     );
 
     await client.query("COMMIT");
