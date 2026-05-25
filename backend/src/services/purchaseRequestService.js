@@ -71,7 +71,33 @@ async function listPurchaseRequests() {
   return purchaseRequestRepository.listPurchaseRequests();
 }
 
+async function handlePurchaseRequestAction({ action, token, requestId, feedback }) {
+  if (!action || !token || !requestId) {
+    throw badRequest("action, token, and requestId are required.");
+  }
+
+  const normalizedAction = String(action).toLowerCase();
+  if (normalizedAction !== "approve" && normalizedAction !== "reject") {
+    throw badRequest("action must be approve or reject.");
+  }
+
+  const status = normalizedAction === "approve" ? "Approved" : "Rejected";
+  const updated = await purchaseRequestRepository.updatePurchaseRequestStatus({
+    requestId,
+    token,
+    status,
+    feedback: feedback || ""
+  });
+
+  if (!updated) {
+    throw badRequest("Request not found or token invalid/expired.");
+  }
+
+  return updated;
+}
+
 module.exports = {
   createPurchaseRequest,
-  listPurchaseRequests
+  listPurchaseRequests,
+  handlePurchaseRequestAction
 };

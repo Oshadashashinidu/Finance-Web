@@ -662,6 +662,35 @@ input:focus {
   gap: 20px;
 }
 
+.approval-list {
+  display: grid;
+  gap: 10px;
+}
+
+.approval-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 12px 14px;
+  border-radius: 14px;
+  background: #f8fafc;
+  border: 1px solid rgba(148, 163, 184, 0.2);
+}
+
+.approval-item .muted {
+  margin: 4px 0 0;
+}
+
+.approval-status {
+  background: #dcfce7;
+  color: #166534;
+  padding: 4px 10px;
+  border-radius: 999px;
+  font-size: 0.75rem;
+  font-weight: 700;
+}
+
 .material-chart {
   margin-top: 24px;
   background: #ffffff;

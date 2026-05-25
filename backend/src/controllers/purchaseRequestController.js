@@ -26,7 +26,26 @@ async function create(req, res, next) {
   }
 }
 
+async function handleAction(req, res, next) {
+  try {
+    const data = await purchaseRequestService.handlePurchaseRequestAction({
+      action: req.query.action,
+      token: req.query.token,
+      requestId: req.query.requestId,
+      feedback: req.query.feedback
+    });
+    res.json({
+      success: true,
+      message: "Purchase request updated successfully.",
+      data
+    });
+  } catch (error) {
+    next(error);
+  }
+}
+
 module.exports = {
   list,
-  create
+  create,
+  handleAction
 };

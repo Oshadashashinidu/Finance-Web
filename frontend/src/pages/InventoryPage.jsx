@@ -218,6 +218,16 @@ export default function InventoryPage({ company, onLogout, onBackHome }) {
   }, [activeSection]);
 
   useEffect(() => {
+    if (activeSection !== "summary") {
+      return;
+    }
+
+    fetchPurchaseRequests()
+      .then((response) => setPurchaseRequests(response.data || []))
+      .catch((error) => setMaterialStatus({ type: "error", message: error.message }));
+  }, [activeSection]);
+
+  useEffect(() => {
     if (activeSection === "stock") {
       refreshStockIntakes();
       refreshStockIssues();
@@ -715,6 +725,36 @@ export default function InventoryPage({ company, onLogout, onBackHome }) {
                         <span className={`status-pill ${item.status.toLowerCase()}`}>{item.status}</span>
                       </div>
                     ))}
+                  </div>
+                </div>
+
+                <div className="panel">
+                  <div className="panel-header">
+                    <div>
+                      <h3>Supplier approvals</h3>
+                      <p className="muted">Latest approved purchase requests.</p>
+                    </div>
+                  </div>
+                  <div className="approval-list">
+                    {purchaseRequests
+                      .filter((request) => String(request.Status || "").toLowerCase() === "approved")
+                      .slice(0, 5)
+                      .map((request) => (
+                        <div key={request.RequestId} className="approval-item">
+                          <div>
+                            <strong>{request.RawMaterialName}</strong>
+                            <p className="muted">
+                              {request.SupplierName} approved {request.RequestedQuantity} {request.Unit}
+                            </p>
+                          </div>
+                          <span className="approval-status">Approved</span>
+                        </div>
+                      ))}
+                    {purchaseRequests.filter(
+                      (request) => String(request.Status || "").toLowerCase() === "approved"
+                    ).length === 0 ? (
+                      <p className="muted">No approvals yet.</p>
+                    ) : null}
                   </div>
                 </div>
 

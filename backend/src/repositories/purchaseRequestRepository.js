@@ -35,7 +35,24 @@ async function listPurchaseRequests() {
   return result.rows;
 }
 
+async function updatePurchaseRequestStatus({ requestId, token, status, feedback }) {
+  const pool = getPool();
+  const result = await pool.query(
+    "UPDATE public.purchase_requests " +
+      "SET \"Status\" = $3, \"Feedback\" = $4, \"token_used\" = true " +
+      "WHERE \"RequestId\" = $1 AND \"action_token\" = $2 " +
+      "AND \"token_used\" = false AND \"token_expires_at\" >= now() " +
+      "RETURNING \"RequestId\", \"SupplierId\", \"SupplierName\", \"SupplierLocation\", " +
+      "\"RawMaterialName\", \"RequestedQuantity\", \"Unit\", \"Notes\", \"Status\", " +
+      "\"Feedback\", \"CreatedAt\"",
+    [requestId, token, status, feedback]
+  );
+
+  return result.rows[0] || null;
+}
+
 module.exports = {
   createPurchaseRequest,
-  listPurchaseRequests
+  listPurchaseRequests,
+  updatePurchaseRequestStatus
 };
