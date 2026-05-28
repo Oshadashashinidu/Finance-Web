@@ -9,6 +9,8 @@ const purchaseRequestRoutes = require("./routes/purchaseRequestRoutes");
 const chatRoutes = require("./routes/chatRoutes");
 const stockIssueRoutes = require("./routes/stockIssueRoutes");
 const fifoRoutes = require("./routes/fifoRoutes");
+const wasteStockRoutes = require("./routes/wasteStockRoutes");
+const inventorySummaryRoutes = require("./routes/inventorySummaryRoutes");
 
 const app = express();
 
@@ -27,6 +29,8 @@ app.use("/api/purchase-requests", purchaseRequestRoutes);
 app.use("/api/chat", chatRoutes);
 app.use("/api/stock-issues", stockIssueRoutes);
 app.use("/api/fifo", fifoRoutes);
+app.use("/api/waste-stocks", wasteStockRoutes);
+app.use("/api/inventory-summary", inventorySummaryRoutes);
 
 app.use((error, req, res, next) => {
   const status = error.status || 500;

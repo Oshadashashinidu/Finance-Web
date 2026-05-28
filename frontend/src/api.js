@@ -155,6 +155,33 @@ export async function createStockIssue(payload) {
   return data;
 }
 
+export async function fetchWasteStocks() {
+  const response = await fetch(`${API_BASE_URL}/api/waste-stocks`);
+  const data = await response.json();
+  if (!response.ok) {
+    throw new Error(data?.message || "Failed to load waste stocks");
+  }
+
+  return data;
+}
+
+export async function createWasteStock(payload) {
+  const response = await fetch(`${API_BASE_URL}/api/waste-stocks`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json"
+    },
+    body: JSON.stringify(payload)
+  });
+
+  const data = await response.json();
+  if (!response.ok) {
+    throw new Error(data?.message || "Failed to create waste stock");
+  }
+
+  return data;
+}
+
 export async function fetchSuppliers() {
   const response = await fetch(`${API_BASE_URL}/api/suppliers`);
   const data = await response.json();
@@ -204,6 +231,16 @@ export async function fetchPurchaseRequests() {
   const data = await response.json();
   if (!response.ok) {
     throw new Error(data?.message || "Failed to load purchase requests");
+  }
+
+  return data;
+}
+
+export async function fetchInventorySummary(range) {
+  const response = await fetch(`${API_BASE_URL}/api/inventory-summary?range=${encodeURIComponent(range)}`);
+  const data = await response.json();
+  if (!response.ok) {
+    throw new Error(data?.message || "Failed to load inventory summary");
   }
 
   return data;

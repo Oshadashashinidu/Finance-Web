@@ -5,37 +5,18 @@ import {
   createSupplier,
   createStockIntake,
   createStockIssue,
+  createWasteStock,
   createPurchaseRequest,
   fetchPurchaseRequests,
   fetchRawMaterials,
   fetchSuppliers,
   fetchStockIssues,
   fetchStockIntakes,
+  fetchWasteStocks,
+  fetchInventorySummary,
   fetchSuppliersByMaterial,
   fetchFifoByMaterial
 } from "../api";
-
-const SUMMARY_CARDS = [
-  { label: "Low stock", value: "12", helper: "SKUs", tone: "danger" },
-  { label: "Inventory value", value: "LKR 1,250,000", helper: "LKR", tone: "success" },
-  { label: "In this month", value: "1,200", helper: "Movements", tone: "info" }
-];
-
-const LOW_STOCK = [
-  { name: "Sugar", qty: 20, status: "Critical" },
-  { name: "Oil", qty: 15, status: "Critical" },
-  { name: "Flour", qty: 100, status: "Moderate" },
-  { name: "Salt", qty: 50, status: "OK" },
-  { name: "Nuts", qty: 30, status: "OK" }
-];
-
-const RECENT_TRANSACTIONS = [
-  { date: "2025-12-04", item: "Sugar" },
-  { date: "2025-12-03", item: "Flour" },
-  { date: "2025-12-01", item: "Oil" },
-  { date: "2025-11-30", item: "Nuts" },
-  { date: "2025-11-29", item: "Sugar" }
-];
 
 const initialMaterialForm = {
   materialName: "",
@@ -59,6 +40,14 @@ const initialIssueForm = {
   quantity: "",
   unit: "kg",
   issueDate: ""
+};
+
+const initialWasteForm = {
+  materialId: "",
+  fifoId: "",
+  quantity: "",
+  unit: "kg",
+  wasteDate: ""
 };
 
 const initialSupplierForm = {
@@ -99,6 +88,12 @@ export default function InventoryPage({ company, onLogout, onBackHome }) {
   const [issueStatus, setIssueStatus] = useState({ type: "", message: "" });
   const [savingIssue, setSavingIssue] = useState(false);
   const [isIssueModalOpen, setIsIssueModalOpen] = useState(false);
+  const [wasteStocks, setWasteStocks] = useState([]);
+  const [wasteForm, setWasteForm] = useState(initialWasteForm);
+  const [wasteStatus, setWasteStatus] = useState({ type: "", message: "" });
+  const [savingWaste, setSavingWaste] = useState(false);
+  const [isWasteModalOpen, setIsWasteModalOpen] = useState(false);
+  const [wasteFifoRows, setWasteFifoRows] = useState([]);
   const [supplierTab, setSupplierTab] = useState("suppliers");
   const [suppliers, setSuppliers] = useState([]);
   const [supplierForm, setSupplierForm] = useState(initialSupplierForm);
@@ -115,6 +110,14 @@ export default function InventoryPage({ company, onLogout, onBackHome }) {
   const [expandedMaterialId, setExpandedMaterialId] = useState(null);
   const [materialFifoMap, setMaterialFifoMap] = useState({});
   const [materialFifoLoading, setMaterialFifoLoading] = useState({});
+  const [summaryRange, setSummaryRange] = useState("today");
+  const [summaryData, setSummaryData] = useState(null);
+  const [todaySummary, setTodaySummary] = useState(null);
+  const [yesterdaySummary, setYesterdaySummary] = useState(null);
+  const [summaryChange, setSummaryChange] = useState(null);
+  const [summaryList, setSummaryList] = useState([]);
+  const [reorderAlerts, setReorderAlerts] = useState([]);
+  const [pendingRequests, setPendingRequests] = useState([]);
 
   const maxMaterialQuantity = Math.max(
     1,
@@ -154,6 +157,15 @@ export default function InventoryPage({ company, onLogout, onBackHome }) {
       setIssueStocks(response.data || []);
     } catch (error) {
       setIssueStatus({ type: "error", message: error.message });
+    }
+  };
+
+  const refreshWasteStocks = async () => {
+    try {
+      const response = await fetchWasteStocks();
+      setWasteStocks(response.data || []);
+    } catch (error) {
+      setWasteStatus({ type: "error", message: error.message });
     }
   };
 
@@ -221,16 +233,36 @@ export default function InventoryPage({ company, onLogout, onBackHome }) {
     if (activeSection !== "summary") {
       return;
     }
-
-    fetchPurchaseRequests()
-      .then((response) => setPurchaseRequests(response.data || []))
+    fetchInventorySummary(summaryRange)
+      .then((response) => {
+        setSummaryData(response.data?.summary || null);
+        setSummaryList(response.data?.summaries || []);
+        setReorderAlerts(response.data?.reorderAlerts || []);
+        setPendingRequests(response.data?.pendingRequests || []);
+      })
       .catch((error) => setMaterialStatus({ type: "error", message: error.message }));
-  }, [activeSection]);
+
+    Promise.all([
+      fetchInventorySummary("today"),
+      fetchInventorySummary("yesterday")
+    ])
+      .then(([todayResponse, yesterdayResponse]) => {
+        setTodaySummary(todayResponse.data?.summary || null);
+        setYesterdaySummary(yesterdayResponse.data?.summary || null);
+        setSummaryChange(todayResponse.data?.change || null);
+      })
+      .catch(() => {
+        setTodaySummary(null);
+        setYesterdaySummary(null);
+        setSummaryChange(null);
+      });
+  }, [activeSection, summaryRange]);
 
   useEffect(() => {
     if (activeSection === "stock") {
       refreshStockIntakes();
       refreshStockIssues();
+      refreshWasteStocks();
       if (rawMaterials.length === 0) {
         fetchRawMaterials()
           .then((response) => setRawMaterials(response.data || []))
@@ -389,6 +421,70 @@ export default function InventoryPage({ company, onLogout, onBackHome }) {
   const handleIssueChange = (event) => {
     const { name, value } = event.target;
     setIssueForm((prev) => ({ ...prev, [name]: value }));
+  };
+
+  const handleWasteChange = (event) => {
+    const { name, value } = event.target;
+    setWasteForm((prev) => ({ ...prev, [name]: value }));
+  };
+
+  const handleWasteMaterialChange = (event) => {
+    const materialId = event.target.value;
+    const selectedMaterial = rawMaterials.find((item) => item.MaterialId === materialId);
+
+    setWasteForm((prev) => ({
+      ...prev,
+      materialId,
+      fifoId: "",
+      unit: selectedMaterial?.Unit || "kg"
+    }));
+
+    if (!materialId) {
+      setWasteFifoRows([]);
+      return;
+    }
+
+    fetchFifoByMaterial(materialId)
+      .then((response) => setWasteFifoRows(response.data || []))
+      .catch((error) => setWasteStatus({ type: "error", message: error.message }));
+  };
+
+  const handleWasteSubmit = async (event) => {
+    event.preventDefault();
+    setSavingWaste(true);
+    setWasteStatus({ type: "", message: "" });
+
+    try {
+      const selectedMaterial = rawMaterials.find((item) => item.MaterialId === wasteForm.materialId);
+      const selectedBatch = wasteFifoRows.find((row) => row.FifoId === wasteForm.fifoId);
+
+      if (!selectedMaterial || !selectedBatch) {
+        throw new Error("Select a material and stock batch.");
+      }
+
+      const payload = {
+        materialId: selectedMaterial.MaterialId,
+        materialName: selectedMaterial.MaterialName,
+        fifoId: selectedBatch.FifoId,
+        quantity: wasteForm.quantity,
+        unit: wasteForm.unit,
+        wasteDate: wasteForm.wasteDate || undefined
+      };
+
+      const response = await createWasteStock(payload);
+      setWasteStocks((prev) => [response.data, ...prev]);
+      setWasteForm(initialWasteForm);
+      setWasteFifoRows([]);
+      setIsWasteModalOpen(false);
+
+      const refreshed = await fetchRawMaterials();
+      setRawMaterials(refreshed.data || []);
+      setWasteStatus({ type: "success", message: response.message });
+    } catch (error) {
+      setWasteStatus({ type: "error", message: error.message });
+    } finally {
+      setSavingWaste(false);
+    }
   };
 
   const handleIssueMaterialChange = (event) => {
@@ -686,43 +782,111 @@ export default function InventoryPage({ company, onLogout, onBackHome }) {
         <main className="inventory-main">
           {activeSection === "summary" ? (
             <>
-              <section className="inventory-summary">
+              <section className="summary-toolbar">
                 <div>
                   <h2>Inventory Summary</h2>
-                  <p className="muted">Live KPIs, low stock risks, and recent movement.</p>
+                  <p className="muted">Day-wise overview with alerts and stock flows.</p>
                 </div>
-                <button className="outline" type="button">Refresh</button>
+                <div className="summary-controls">
+                  <label className="summary-select">
+                    Summary range
+                    <select
+                      value={summaryRange}
+                      onChange={(event) => setSummaryRange(event.target.value)}
+                    >
+                      <option value="today">Today</option>
+                      <option value="yesterday">Yesterday</option>
+                      <option value="last10">Last 10 days</option>
+                    </select>
+                  </label>
+                </div>
               </section>
 
               <section className="summary-grid">
-                {SUMMARY_CARDS.map((card) => (
-                  <div key={card.label} className="summary-card">
-                    <p className="summary-label">{card.label}</p>
-                    <p className={`summary-value ${card.tone}`}>{card.value}</p>
-                    <p className="summary-helper">{card.helper}</p>
+                <div className="summary-card">
+                  <div className="summary-card-header">
+                    <span className="summary-icon">📦</span>
+                    <p className="summary-label">Total raw materials</p>
                   </div>
-                ))}
+                  <p className="summary-value">{summaryData?.TotalRawMaterials ?? 0}</p>
+                  <p className="summary-helper">Items</p>
+                </div>
+                <div className="summary-card">
+                  <div className="summary-card-header">
+                    <span className="summary-icon warning">⚠️</span>
+                    <p className="summary-label">Low stock items</p>
+                  </div>
+                  <p className="summary-value danger">{summaryData?.LowStockCount ?? 0}</p>
+                  <p className="summary-helper">Items</p>
+                </div>
+                <div className="summary-card">
+                  <div className="summary-card-header">
+                    <span className="summary-icon">🧾</span>
+                    <p className="summary-label">Pending requests</p>
+                  </div>
+                  <p className="summary-value info">{summaryData?.PendingPurchaseCount ?? 0}</p>
+                  <p className="summary-helper">Requests</p>
+                </div>
               </section>
 
-              <section className="inventory-panels">
+              <section className="summary-panels">
                 <div className="panel">
                   <div className="panel-header">
                     <div>
-                      <h3>Low Stock Items</h3>
-                      <p className="muted">Monitor materials approaching minimum levels</p>
+                      <h3>Stock status</h3>
+                      <p className="muted">Normal vs low vs out of stock.</p>
                     </div>
                   </div>
-                  <div className="table">
-                    <div className="table-row header">
-                      <span>Name</span>
-                      <span>Qty</span>
-                      <span>Status</span>
+                  {(() => {
+                    const total = summaryData?.TotalRawMaterials || 0;
+                    const normal = summaryData?.OkStockCount || 0;
+                    const low = summaryData?.LowStockCount || 0;
+                    const out = summaryData?.OutOfStockCount || 0;
+                    const normalPct = total ? (normal / total) * 100 : 0;
+                    const lowPct = total ? (low / total) * 100 : 0;
+                    const outPct = total ? (out / total) * 100 : 0;
+
+                    return (
+                      <div className="status-chart">
+                        <div
+                          className="donut"
+                          style={{
+                            background: `conic-gradient(#22c55e 0% ${normalPct}%, #f59e0b ${normalPct}% ${normalPct + lowPct}%, #ef4444 ${normalPct + lowPct}% 100%)`
+                          }}
+                        >
+                          <span>{total || 0}</span>
+                          <small>Total</small>
+                        </div>
+                        <div className="status-legend">
+                          <div><span className="dot ok" /> Normal {normal}</div>
+                          <div><span className="dot low" /> Low {low}</div>
+                          <div><span className="dot out" /> Out {out}</div>
+                        </div>
+                      </div>
+                    );
+                  })()}
+                </div>
+
+                <div className="panel">
+                  <div className="panel-header">
+                    <div>
+                      <h3>Reorder alerts</h3>
+                      <p className="muted">Items at or below reorder level.</p>
                     </div>
-                    {LOW_STOCK.map((item) => (
-                      <div key={item.name} className="table-row">
-                        <span>{item.name}</span>
-                        <span>{item.qty}</span>
-                        <span className={`status-pill ${item.status.toLowerCase()}`}>{item.status}</span>
+                  </div>
+                  <div className="alert-list">
+                    {reorderAlerts.length === 0 ? (
+                      <p className="muted">No reorder alerts.</p>
+                    ) : reorderAlerts.map((item) => (
+                      <div key={item.MaterialId} className="alert-item">
+                        <span className="alert-icon">🔔</span>
+                        <div>
+                          <strong>{item.MaterialName}</strong>
+                          <p className="muted">{item.CurrentQuantity} {item.Unit} (level {item.ReorderLevel})</p>
+                        </div>
+                        <span className={`status-pill ${String(item.Status || "low").toLowerCase()}`}>
+                          {item.Status || "Low"}
+                        </span>
                       </div>
                     ))}
                   </div>
@@ -731,54 +895,141 @@ export default function InventoryPage({ company, onLogout, onBackHome }) {
                 <div className="panel">
                   <div className="panel-header">
                     <div>
-                      <h3>Supplier approvals</h3>
-                      <p className="muted">Latest approved purchase requests.</p>
+                      <h3>Pending purchase requests</h3>
+                      <p className="muted">Awaiting supplier response.</p>
                     </div>
                   </div>
                   <div className="approval-list">
-                    {purchaseRequests
-                      .filter((request) => String(request.Status || "").toLowerCase() === "approved")
-                      .slice(0, 5)
-                      .map((request) => (
-                        <div key={request.RequestId} className="approval-item">
-                          <div>
-                            <strong>{request.RawMaterialName}</strong>
-                            <p className="muted">
-                              {request.SupplierName} approved {request.RequestedQuantity} {request.Unit}
-                            </p>
-                          </div>
-                          <span className="approval-status">Approved</span>
+                    {pendingRequests.length === 0 ? (
+                      <p className="muted">No pending requests.</p>
+                    ) : pendingRequests.slice(0, 6).map((request) => (
+                      <div key={request.RequestId} className="approval-item">
+                        <span className="alert-icon pending">📌</span>
+                        <div>
+                          <strong>{request.RawMaterialName}</strong>
+                          <p className="muted">
+                            {request.SupplierName} • {request.RequestedQuantity} {request.Unit}
+                          </p>
                         </div>
-                      ))}
-                    {purchaseRequests.filter(
-                      (request) => String(request.Status || "").toLowerCase() === "approved"
-                    ).length === 0 ? (
-                      <p className="muted">No approvals yet.</p>
-                    ) : null}
+                        <span className="approval-status pending">Pending</span>
+                      </div>
+                    ))}
                   </div>
                 </div>
 
                 <div className="panel">
                   <div className="panel-header">
                     <div>
-                      <h3>Recent Transactions</h3>
-                      <p className="muted">Track what moved most recently</p>
+                      <h3>Stock flow overview</h3>
+                      <p className="muted">Tap a card to open the flow.</p>
                     </div>
                   </div>
-                  <div className="table">
-                    <div className="table-row header two">
-                      <span>Date</span>
-                      <span>Item</span>
-                    </div>
-                    {RECENT_TRANSACTIONS.map((row) => (
-                      <div key={`${row.date}-${row.item}`} className="table-row two">
-                        <span>{row.date}</span>
-                        <span>{row.item}</span>
+                  <div className="flow-grid">
+                    {(() => {
+                      const stockIn = todaySummary?.StockInQty ?? summaryData?.StockInQty ?? 0;
+                      const stockOut = todaySummary?.StockOutQty ?? summaryData?.StockOutQty ?? 0;
+                      const wasteQty = todaySummary?.WasteQty ?? summaryData?.WasteQty ?? 0;
+                      const yesterdayIn = yesterdaySummary?.StockInQty ?? 0;
+                      const yesterdayOut = yesterdaySummary?.StockOutQty ?? 0;
+                      const yesterdayWaste = yesterdaySummary?.WasteQty ?? 0;
+
+                      const deltaIn = summaryChange?.StockInDelta ?? (stockIn - yesterdayIn);
+                      const deltaOut = summaryChange?.StockOutDelta ?? (stockOut - yesterdayOut);
+                      const deltaWaste = summaryChange?.WasteDelta ?? (wasteQty - yesterdayWaste);
+
+                      const formatDelta = (value) => `${value >= 0 ? "+" : ""}${value} kg vs yesterday`;
+
+                      return (
+                        <>
+                    <button
+                      className="flow-card"
+                      type="button"
+                      onClick={() => {
+                        setActiveSection("stock");
+                        setStockFlow("add");
+                      }}
+                    >
+                      <span className="flow-icon in">↓</span>
+                      <span className="flow-label">Stock In</span>
+                      <div className="flow-value">
+                        <strong>{stockIn}</strong>
+                        <span className="muted">kg</span>
                       </div>
-                    ))}
+                      <span className={`flow-delta ${deltaIn >= 0 ? "positive" : "negative"}`}>
+                        {formatDelta(deltaIn)}
+                      </span>
+                    </button>
+                    <button
+                      className="flow-card"
+                      type="button"
+                      onClick={() => {
+                        setActiveSection("stock");
+                        setStockFlow("issue");
+                      }}
+                    >
+                      <span className="flow-icon out">↑</span>
+                      <span className="flow-label">Stock Out</span>
+                      <div className="flow-value">
+                        <strong>{stockOut}</strong>
+                        <span className="muted">kg</span>
+                      </div>
+                      <span className={`flow-delta ${deltaOut >= 0 ? "positive" : "negative"}`}>
+                        {formatDelta(deltaOut)}
+                      </span>
+                    </button>
+                    <button
+                      className="flow-card"
+                      type="button"
+                      onClick={() => {
+                        setActiveSection("stock");
+                        setStockFlow("waste");
+                      }}
+                    >
+                      <span className="flow-icon waste">🗑</span>
+                      <span className="flow-label">Wastage</span>
+                      <div className="flow-value">
+                        <strong>{wasteQty}</strong>
+                        <span className="muted">kg</span>
+                      </div>
+                      <span className={`flow-delta ${deltaWaste >= 0 ? "positive" : "negative"}`}>
+                        {formatDelta(deltaWaste)}
+                      </span>
+                    </button>
+                        </>
+                      );
+                    })()}
                   </div>
                 </div>
               </section>
+
+              {summaryRange === "last10" ? (
+                <section className="panel">
+                  <div className="panel-header">
+                    <div>
+                      <h3>Last 10 days</h3>
+                      <p className="muted">Daily summary snapshots.</p>
+                    </div>
+                  </div>
+                  <div className="table">
+                    <div className="table-row header five">
+                      <span>Date</span>
+                      <span>Total</span>
+                      <span>Low</span>
+                      <span>Pending</span>
+                      <span>Out</span>
+                    </div>
+                    {summaryList.map((row) => (
+                      <div key={row.SummaryDate} className="table-row five">
+                        <span>{row.SummaryDate}</span>
+                        <span>{row.TotalRawMaterials}</span>
+                        <span>{row.LowStockCount}</span>
+                        <span>{row.PendingPurchaseCount}</span>
+                        <span>{row.OutOfStockCount}</span>
+                      </div>
+                    ))}
+                  </div>
+                </section>
+              ) : null}
             </>
           ) : null}
 
@@ -1034,7 +1285,18 @@ export default function InventoryPage({ company, onLogout, onBackHome }) {
                   >
                     Issue stock
                   </button>
-                ) : null}
+                ) : (
+                  <button
+                    className="primary"
+                    type="button"
+                    onClick={() => {
+                      setWasteStatus({ type: "", message: "" });
+                      setIsWasteModalOpen(true);
+                    }}
+                  >
+                    Waste stock
+                  </button>
+                )}
                 <button
                   className="ghost"
                   type="button"
@@ -1050,21 +1312,34 @@ export default function InventoryPage({ company, onLogout, onBackHome }) {
                 <button
                   className={`pill ${stockFlow === "add" ? "active" : ""}`}
                   type="button"
-                  onClick={() => setStockFlow("add")}
+                  onClick={() => {
+                    setStockFlow("add");
+                    setIsWasteModalOpen(false);
+                    setWasteForm(initialWasteForm);
+                    setWasteFifoRows([]);
+                  }}
                 >
                   Add stock
                 </button>
                 <button
                   className={`pill ${stockFlow === "issue" ? "active" : ""}`}
                   type="button"
-                  onClick={() => setStockFlow("issue")}
+                  onClick={() => {
+                    setStockFlow("issue");
+                    setIsWasteModalOpen(false);
+                    setWasteForm(initialWasteForm);
+                    setWasteFifoRows([]);
+                  }}
                 >
                   Issue stock
                 </button>
                 <button
                   className={`pill ${stockFlow === "waste" ? "active" : ""}`}
                   type="button"
-                  onClick={() => setStockFlow("waste")}
+                  onClick={() => {
+                    setStockFlow("waste");
+                    refreshWasteStocks();
+                  }}
                 >
                   Waste stock
                 </button>
@@ -1091,6 +1366,9 @@ export default function InventoryPage({ company, onLogout, onBackHome }) {
               ) : null}
               {stockFlow === "issue" && issueStatus.message ? (
                 <div className={`alert ${issueStatus.type}`}>{issueStatus.message}</div>
+              ) : null}
+              {stockFlow === "waste" && wasteStatus.message ? (
+                <div className={`alert ${wasteStatus.type}`}>{wasteStatus.message}</div>
               ) : null}
 
               {stockFlow === "add" && isStockModalOpen ? (
@@ -1296,6 +1574,99 @@ export default function InventoryPage({ company, onLogout, onBackHome }) {
                 </div>
               ) : null}
 
+              {stockFlow === "waste" && isWasteModalOpen ? (
+                <div className="modal-overlay" role="dialog" aria-modal="true">
+                  <div className="modal">
+                    <div className="modal-header">
+                      <div>
+                        <h4>Waste stock</h4>
+                        <p className="muted">Remove damaged or expired stock batches.</p>
+                      </div>
+                      <button
+                        className="ghost"
+                        type="button"
+                        onClick={() => setIsWasteModalOpen(false)}
+                      >
+                        Close
+                      </button>
+                    </div>
+                    <form className="form material-form" onSubmit={handleWasteSubmit}>
+                      <label>
+                        Raw material
+                        <select
+                          name="materialId"
+                          value={wasteForm.materialId}
+                          onChange={handleWasteMaterialChange}
+                          required
+                        >
+                          <option value="">Select material</option>
+                          {rawMaterials.map((material) => (
+                            <option key={material.MaterialId} value={material.MaterialId}>
+                              {material.MaterialName}
+                            </option>
+                          ))}
+                        </select>
+                      </label>
+                      <label>
+                        Stock batch (FIFO)
+                        <select
+                          name="fifoId"
+                          value={wasteForm.fifoId}
+                          onChange={handleWasteChange}
+                          required
+                        >
+                          <option value="">Select batch</option>
+                          {wasteFifoRows.map((row) => (
+                            <option key={row.FifoId} value={row.FifoId}>
+                              {row.IntakeDate ? String(row.IntakeDate).slice(0, 10) : ""} -
+                              {" "}{row.RemainingQuantity} {row.Unit} @ LKR {Number(row.UnitPrice).toFixed(2)}
+                            </option>
+                          ))}
+                        </select>
+                      </label>
+                      <label>
+                        Quantity
+                        <input
+                          name="quantity"
+                          type="number"
+                          step="0.01"
+                          value={wasteForm.quantity}
+                          onChange={handleWasteChange}
+                          required
+                        />
+                      </label>
+                      <label>
+                        Unit
+                        <input name="unit" value={wasteForm.unit} onChange={handleWasteChange} />
+                      </label>
+                      <label>
+                        Date
+                        <input
+                          name="wasteDate"
+                          type="date"
+                          value={wasteForm.wasteDate}
+                          onChange={handleWasteChange}
+                        />
+                      </label>
+                      <div className="total-pill">
+                        <span>Auto total</span>
+                        <strong>
+                          LKR {(() => {
+                            const selected = wasteFifoRows.find((row) => row.FifoId === wasteForm.fifoId);
+                            const unitPrice = Number(selected?.UnitPrice) || 0;
+                            const quantity = Number(wasteForm.quantity) || 0;
+                            return (unitPrice * quantity).toFixed(2);
+                          })()}
+                        </strong>
+                      </div>
+                      <button className="primary" type="submit" disabled={savingWaste}>
+                        {savingWaste ? "Saving..." : "Save waste"}
+                      </button>
+                    </form>
+                  </div>
+                </div>
+              ) : null}
+
               {stockFlow === "add" ? (
                 <div className="stock-card-grid">
                   {stockIntakes.map((intake) => (
@@ -1348,14 +1719,43 @@ export default function InventoryPage({ company, onLogout, onBackHome }) {
                 </div>
               ) : (
                 <div className="stock-card-grid">
-                  <article className="stock-card">
-                    <div className="stock-card-header">
-                      <div>
-                        <h4>Waste stock</h4>
-                        <p className="muted">No waste records yet.</p>
+                  {wasteStocks.length === 0 ? (
+                    <article className="stock-card">
+                      <div className="stock-card-header">
+                        <div>
+                          <h4>Waste stock</h4>
+                          <p className="muted">No waste records yet.</p>
+                        </div>
                       </div>
-                    </div>
-                  </article>
+                    </article>
+                  ) : (
+                    wasteStocks.map((waste) => (
+                      <article key={waste.WasteId} className="stock-card">
+                        <div className="stock-card-header">
+                          <div>
+                            <h4>{waste.MaterialName}</h4>
+                            <p className="muted">
+                              Batch date: {waste.IntakeDate ? String(waste.IntakeDate).slice(0, 10) : ""}
+                            </p>
+                          </div>
+                          <span className="muted">
+                            {waste.WasteDate ? String(waste.WasteDate).slice(0, 10) : ""}
+                          </span>
+                        </div>
+                        <div className="stock-card-row">
+                          <div>
+                            <p className="muted">Quantity</p>
+                            <strong>{waste.Quantity} {waste.Unit}</strong>
+                          </div>
+                          <div>
+                            <p className="muted">Unit price</p>
+                            <strong>LKR {waste.UnitPrice} / {waste.Unit}</strong>
+                          </div>
+                        </div>
+                        <span className="stock-total">LKR {waste.TotalCost}</span>
+                      </article>
+                    ))
+                  )}
                 </div>
               )}
             </section>
