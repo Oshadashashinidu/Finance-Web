@@ -1,6 +1,6 @@
 # Finance Web
 
-Full-stack finance onboarding app with a React (Vite) frontend and Spring Boot backend.
+Full-stack finance on boarding app with a React (Vite) frontend and Node js backend.
 
 ## 🚀 Launch App
 
