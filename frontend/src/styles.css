@@ -1746,7 +1746,7 @@ input:focus {
 @media (max-width: 900px) {
   .auth-shell {
     grid-template-columns: 1fr;
-    height: 720px;
+    height: auto;
   }
 
   .auth-visual {
@@ -1754,6 +1754,48 @@ input:focus {
   }
 
   .auth-panel {
-    height: 520px;
+    height: auto;
+  }
+}
+
+@media (max-width: 600px) {
+  .auth-page {
+    padding: 16px;
+  }
+
+  .auth-shell {
+    border-radius: 24px;
+  }
+
+  .auth-visual {
+    padding: 28px 20px;
+    min-height: 220px;
+  }
+
+  .auth-visual h1 {
+    font-size: clamp(1.8rem, 6vw, 2.4rem);
+  }
+
+  .auth-panel {
+    padding: 28px 22px 32px;
+    gap: 20px;
+  }
+
+  .auth-panel-body h2 {
+    font-size: 1.5rem;
+  }
+
+  .auth-switch,
+  .auth-panel .primary {
+    padding: 10px 16px;
+  }
+
+  .password-field {
+    grid-template-columns: 1fr;
+  }
+
+  .password-toggle {
+    width: 100%;
+    justify-self: stretch;
   }
 }
