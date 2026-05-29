@@ -1469,10 +1469,167 @@ input:focus {
     grid-template-columns: 1fr;
   }
 
+  .summary-panels {
+    grid-template-columns: 1fr;
+  }
+
   .inventory-panels {
     grid-template-columns: 1fr;
   }
 
+  .inventory-summary {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .summary-toolbar {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .summary-controls {
+    width: 100%;
+    flex-wrap: wrap;
+  }
+
+  .status-chart {
+    grid-template-columns: 1fr;
+    min-height: auto;
+  }
+
+  .flow-grid {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .supplier-card {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .purchase-card-row,
+  .stock-card-row {
+    grid-template-columns: 1fr;
+  }
+
+  .intake-row,
+  .fifo-row {
+    grid-template-columns: 1fr;
+  }
+
+  .details-header {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .chat-input {
+    grid-template-columns: 1fr;
+  }
+
+  .material-form {
+    grid-template-columns: 1fr 1fr;
+  }
+
+
+@media (max-width: 600px) {
+  .page,
+  .home {
+    padding: 28px 16px 40px;
+  }
+
+  .hero {
+    gap: 16px;
+  }
+
+  .home-header {
+    gap: 16px;
+  }
+
+  .profile {
+    width: 100%;
+    justify-content: space-between;
+  }
+
+  .card-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .module-card {
+    padding: 18px;
+  }
+
+  .module-card-media {
+    height: 110px;
+  }
+
+  .card,
+  .side-card {
+    padding: 20px;
+  }
+
+  .inventory-topbar {
+    padding: 16px 16px 8px;
+  }
+
+  .inventory-shell {
+    padding: 0 16px 32px;
+  }
+
+  .inventory-title h1 {
+    font-size: 1.5rem;
+  }
+
+  .inventory-sidebar {
+    padding: 16px;
+  }
+
+  .summary-select select {
+    min-width: 140px;
+    width: 100%;
+  }
+
+  .summary-card {
+    padding: 12px;
+  }
+
+  .donut {
+    width: 150px;
+    height: 150px;
+  }
+
+  .donut::after {
+    inset: 20px;
+  }
+
+  .flow-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .panel {
+    padding: 16px;
+  }
+
+  .table {
+    overflow-x: auto;
+  }
+
+  .table-row.five,
+  .table-row.six,
+  .table-row.seven {
+    min-width: 640px;
+  }
+
+  .modal {
+    padding: 16px;
+  }
+
+  .supplier-tabs {
+    flex-wrap: wrap;
+  }
+
+  .material-form {
+    grid-template-columns: 1fr;
+  }
+}
   .toggle {
     width: 100%;
     justify-content: center;
