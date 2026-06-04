@@ -36,7 +36,7 @@ CREATE TABLE public.product_material_requirements (
   CreatedAt timestamp with time zone NOT NULL DEFAULT now(),
   CONSTRAINT product_material_requirements_pkey PRIMARY KEY (RequirementId),
   CONSTRAINT product_material_requirements_ProductId_fkey FOREIGN KEY (ProductId) REFERENCES public.product_recipes(ProductId),
-  CONSTRAINT product_material_requirements_MaterialId_fkey FOREIGN KEY (MaterialId) REFERENCES public.raw_materials(MaterialId)
+  CONSTRAINT product_material_requirements_MaterialId_fkey FOREIGN KEY (MaterialId) REFERENCES public.raw_materials("MaterialId")
 );
 CREATE TABLE public.product_recipes (
   ProductId text NOT NULL,
@@ -62,36 +62,36 @@ CREATE TABLE public.purchase_requests (
   token_expires_at timestamp with time zone DEFAULT (now() + '7 days'::interval),
   token_used boolean NOT NULL DEFAULT false,
   CONSTRAINT purchase_requests_pkey PRIMARY KEY (RequestId),
-  CONSTRAINT purchase_requests_SupplierId_fkey FOREIGN KEY (SupplierId) REFERENCES public.suppliers(SupplierId)
+  CONSTRAINT purchase_requests_SupplierId_fkey FOREIGN KEY (SupplierId) REFERENCES public.suppliers("SupplierId")
 );
 CREATE TABLE public.raw_materials (
-  MaterialId text NOT NULL,
-  MaterialName text NOT NULL,
-  ReorderLevel numeric NOT NULL DEFAULT 0,
-  CurrentQuantity numeric NOT NULL DEFAULT 0,
-  Unit text NOT NULL DEFAULT 'kg'::text,
-  UnitCost numeric NOT NULL DEFAULT 0,
-  TotalCost numeric NOT NULL DEFAULT 0,
-  Status text NOT NULL,
-  CreatedAt timestamp with time zone NOT NULL DEFAULT now(),
-  UpdatedAt timestamp with time zone NOT NULL DEFAULT now(),
-  CONSTRAINT raw_materials_pkey PRIMARY KEY (MaterialId)
+  "MaterialId" text NOT NULL,
+  "MaterialName" text NOT NULL,
+  "ReorderLevel" numeric NOT NULL DEFAULT 0,
+  "CurrentQuantity" numeric NOT NULL DEFAULT 0,
+  "Unit" text NOT NULL DEFAULT 'kg'::text,
+  "UnitCost" numeric NOT NULL DEFAULT 0,
+  "TotalCost" numeric NOT NULL DEFAULT 0,
+  "Status" text NOT NULL,
+  "CreatedAt" timestamp with time zone NOT NULL DEFAULT now(),
+  "UpdatedAt" timestamp with time zone NOT NULL DEFAULT now(),
+  CONSTRAINT raw_materials_pkey PRIMARY KEY ("MaterialId")
 );
 CREATE TABLE public.stock_intakes (
-  IntakeId text NOT NULL,
-  MaterialId text NOT NULL,
-  MaterialName text NOT NULL,
-  SupplierId text,
-  SupplierName text NOT NULL DEFAULT ''::text,
-  Quantity numeric NOT NULL DEFAULT 0,
-  Unit text NOT NULL DEFAULT 'kg'::text,
-  UnitPrice numeric NOT NULL DEFAULT 0,
-  TotalCost numeric NOT NULL DEFAULT 0,
-  IntakeDate timestamp with time zone NOT NULL DEFAULT now(),
-  CreatedAt timestamp with time zone NOT NULL DEFAULT now(),
-  CONSTRAINT stock_intakes_pkey PRIMARY KEY (IntakeId),
-  CONSTRAINT stock_intakes_MaterialId_fkey FOREIGN KEY (MaterialId) REFERENCES public.raw_materials(MaterialId),
-  CONSTRAINT stock_intakes_SupplierId_fkey FOREIGN KEY (SupplierId) REFERENCES public.suppliers(SupplierId)
+  "IntakeId" text NOT NULL,
+  "MaterialId" text NOT NULL,
+  "MaterialName" text NOT NULL,
+  "SupplierId" text,
+  "SupplierName" text NOT NULL DEFAULT ''::text,
+  "Quantity" numeric NOT NULL DEFAULT 0,
+  "Unit" text NOT NULL DEFAULT 'kg'::text,
+  "UnitPrice" numeric NOT NULL DEFAULT 0,
+  "TotalCost" numeric NOT NULL DEFAULT 0,
+  "IntakeDate" timestamp with time zone NOT NULL DEFAULT now(),
+  "CreatedAt" timestamp with time zone NOT NULL DEFAULT now(),
+  CONSTRAINT stock_intakes_pkey PRIMARY KEY ("IntakeId"),
+  CONSTRAINT stock_intakes_MaterialId_fkey FOREIGN KEY ("MaterialId") REFERENCES public.raw_materials("MaterialId"),
+  CONSTRAINT stock_intakes_SupplierId_fkey FOREIGN KEY ("SupplierId") REFERENCES public.suppliers("SupplierId")
 );
 CREATE TABLE public.fifo (
   "FifoId" text NOT NULL,
@@ -120,7 +120,7 @@ CREATE TABLE public.stock_issues (
   IssueDate timestamp with time zone NOT NULL DEFAULT now(),
   CreatedAt timestamp with time zone NOT NULL DEFAULT now(),
   CONSTRAINT stock_issues_pkey PRIMARY KEY (IssueId),
-  CONSTRAINT stock_issues_materialid_fkey FOREIGN KEY (MaterialId) REFERENCES public.raw_materials(MaterialId)
+  CONSTRAINT stock_issues_materialid_fkey FOREIGN KEY (MaterialId) REFERENCES public.raw_materials("MaterialId")
 );
 CREATE TABLE public.inventory_daily_summaries (
   summary_date date NOT NULL,
@@ -163,26 +163,47 @@ CREATE TABLE public.waste_stocks (
   wastedate timestamp with time zone NOT NULL DEFAULT now(),
   createdat timestamp with time zone NOT NULL DEFAULT now(),
   CONSTRAINT waste_stocks_pkey PRIMARY KEY (wasteid),
-  CONSTRAINT waste_stocks_materialid_fkey FOREIGN KEY (materialid) REFERENCES public.raw_materials(materialid),
-  CONSTRAINT waste_stocks_fifoid_fkey FOREIGN KEY (fifoid) REFERENCES public.fifo(fifoid)
+  CONSTRAINT waste_stocks_materialid_fkey FOREIGN KEY (materialid) REFERENCES public.raw_materials("MaterialId"),
+  CONSTRAINT waste_stocks_fifoid_fkey FOREIGN KEY (fifoid) REFERENCES public.fifo("FifoId")
+);
+CREATE TABLE public.return_stocks (
+  returnid text NOT NULL,
+  materialid text NOT NULL,
+  materialname text NOT NULL,
+  supplierid text NOT NULL,
+  suppliername text NOT NULL,
+  supplieremail text NOT NULL,
+  fifoid text NOT NULL,
+  quantity numeric NOT NULL DEFAULT 0,
+  unit text NOT NULL DEFAULT 'kg'::text,
+  unitprice numeric NOT NULL DEFAULT 0,
+  totalcost numeric NOT NULL DEFAULT 0,
+  intakedate timestamp with time zone,
+  returndate timestamp with time zone NOT NULL DEFAULT now(),
+  reason text NOT NULL DEFAULT ''::text,
+  createdat timestamp with time zone NOT NULL DEFAULT now(),
+  CONSTRAINT return_stocks_pkey PRIMARY KEY (returnid),
+  CONSTRAINT return_stocks_materialid_fkey FOREIGN KEY (materialid) REFERENCES public.raw_materials("MaterialId"),
+  CONSTRAINT return_stocks_supplierid_fkey FOREIGN KEY (supplierid) REFERENCES public.suppliers("SupplierId"),
+  CONSTRAINT return_stocks_fifoid_fkey FOREIGN KEY (fifoid) REFERENCES public.fifo("FifoId")
 );
 CREATE TABLE public.supplier_materials (
-  MaterialLinkId text NOT NULL,
-  SupplierId text NOT NULL,
-  MaterialName text NOT NULL,
-  CreatedAt timestamp with time zone NOT NULL DEFAULT now(),
-  CONSTRAINT supplier_materials_pkey PRIMARY KEY (MaterialLinkId),
-  CONSTRAINT supplier_materials_SupplierId_fkey FOREIGN KEY (SupplierId) REFERENCES public.suppliers(SupplierId)
+  "MaterialLinkId" text NOT NULL,
+  "SupplierId" text NOT NULL,
+  "MaterialName" text NOT NULL,
+  "CreatedAt" timestamp with time zone NOT NULL DEFAULT now(),
+  CONSTRAINT supplier_materials_pkey PRIMARY KEY ("MaterialLinkId"),
+  CONSTRAINT supplier_materials_SupplierId_fkey FOREIGN KEY ("SupplierId") REFERENCES public.suppliers("SupplierId")
 );
 CREATE TABLE public.suppliers (
-  SupplierId text NOT NULL,
-  SupplierName text NOT NULL,
-  Location text NOT NULL DEFAULT ''::text,
-  Email text NOT NULL,
-  PhoneNumber text NOT NULL,
-  CreatedAt timestamp with time zone NOT NULL DEFAULT now(),
-  UpdatedAt timestamp with time zone NOT NULL DEFAULT now(),
-  CONSTRAINT suppliers_pkey PRIMARY KEY (SupplierId)
+  "SupplierId" text NOT NULL,
+  "SupplierName" text NOT NULL,
+  "Location" text NOT NULL DEFAULT ''::text,
+  "Email" text NOT NULL,
+  "PhoneNumber" text NOT NULL,
+  "CreatedAt" timestamp with time zone NOT NULL DEFAULT now(),
+  "UpdatedAt" timestamp with time zone NOT NULL DEFAULT now(),
+  CONSTRAINT suppliers_pkey PRIMARY KEY ("SupplierId")
 );
 CREATE TABLE public.transactions (
   Id text NOT NULL,
@@ -194,4 +215,22 @@ CREATE TABLE public.transactions (
   Notes text NOT NULL DEFAULT ''::text,
   Currency text NOT NULL DEFAULT 'USD'::text,
   CONSTRAINT transactions_pkey PRIMARY KEY (Id)
+);
+CREATE TABLE public.stock_returns (
+  return_id text NOT NULL,
+  material_id text NOT NULL,
+  material_name text NOT NULL,
+  intake_id text,
+  fifo_id text,
+  supplier_id text,
+  supplier_name text,
+  quantity numeric NOT NULL DEFAULT 0,
+  unit text NOT NULL DEFAULT 'kg',
+  unit_price numeric NOT NULL DEFAULT 0,
+  total_cost numeric NOT NULL DEFAULT 0,
+  reason text NOT NULL DEFAULT '',
+  return_date timestamp with time zone NOT NULL DEFAULT now(),
+  created_at timestamp with time zone NOT NULL DEFAULT now(),
+  CONSTRAINT stock_returns_pkey PRIMARY KEY (return_id),
+  CONSTRAINT stock_returns_materialid_fkey FOREIGN KEY (material_id) REFERENCES public.raw_materials("MaterialId")
 );

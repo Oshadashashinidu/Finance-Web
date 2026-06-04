@@ -13,9 +13,12 @@ import {
   fetchStockIssues,
   fetchStockIntakes,
   fetchWasteStocks,
+  fetchReturnStocks,
+  fetchReturnBatches,
   fetchInventorySummary,
   fetchSuppliersByMaterial,
-  fetchFifoByMaterial
+  fetchFifoByMaterial,
+  createReturnStock
 } from "../api";
 
 const initialMaterialForm = {
@@ -48,6 +51,15 @@ const initialWasteForm = {
   quantity: "",
   unit: "kg",
   wasteDate: ""
+};
+
+const initialReturnForm = {
+  materialId: "",
+  fifoId: "",
+  quantity: "",
+  unit: "kg",
+  returnDate: "",
+  reason: ""
 };
 
 const initialSupplierForm = {
@@ -94,6 +106,12 @@ export default function InventoryPage({ company, onLogout, onBackHome }) {
   const [savingWaste, setSavingWaste] = useState(false);
   const [isWasteModalOpen, setIsWasteModalOpen] = useState(false);
   const [wasteFifoRows, setWasteFifoRows] = useState([]);
+  const [returnStocks, setReturnStocks] = useState([]);
+  const [returnForm, setReturnForm] = useState(initialReturnForm);
+  const [returnStatus, setReturnStatus] = useState({ type: "", message: "" });
+  const [savingReturn, setSavingReturn] = useState(false);
+  const [isReturnModalOpen, setIsReturnModalOpen] = useState(false);
+  const [returnBatches, setReturnBatches] = useState([]);
   const [supplierTab, setSupplierTab] = useState("suppliers");
   const [suppliers, setSuppliers] = useState([]);
   const [supplierForm, setSupplierForm] = useState(initialSupplierForm);
@@ -157,6 +175,15 @@ export default function InventoryPage({ company, onLogout, onBackHome }) {
       setIssueStocks(response.data || []);
     } catch (error) {
       setIssueStatus({ type: "error", message: error.message });
+    }
+  };
+
+  const refreshReturnStocks = async () => {
+    try {
+      const response = await fetchReturnStocks();
+      setReturnStocks(response.data || []);
+    } catch (error) {
+      setReturnStatus({ type: "error", message: error.message });
     }
   };
 
@@ -263,6 +290,7 @@ export default function InventoryPage({ company, onLogout, onBackHome }) {
       refreshStockIntakes();
       refreshStockIssues();
       refreshWasteStocks();
+      refreshReturnStocks();
       if (rawMaterials.length === 0) {
         fetchRawMaterials()
           .then((response) => setRawMaterials(response.data || []))
@@ -428,6 +456,11 @@ export default function InventoryPage({ company, onLogout, onBackHome }) {
     setWasteForm((prev) => ({ ...prev, [name]: value }));
   };
 
+  const handleReturnChange = (event) => {
+    const { name, value } = event.target;
+    setReturnForm((prev) => ({ ...prev, [name]: value }));
+  };
+
   const handleWasteMaterialChange = (event) => {
     const materialId = event.target.value;
     const selectedMaterial = rawMaterials.find((item) => item.MaterialId === materialId);
@@ -447,6 +480,27 @@ export default function InventoryPage({ company, onLogout, onBackHome }) {
     fetchFifoByMaterial(materialId)
       .then((response) => setWasteFifoRows(response.data || []))
       .catch((error) => setWasteStatus({ type: "error", message: error.message }));
+  };
+
+  const handleReturnMaterialChange = (event) => {
+    const materialId = event.target.value;
+    const selectedMaterial = rawMaterials.find((item) => item.MaterialId === materialId);
+
+    setReturnForm((prev) => ({
+      ...prev,
+      materialId,
+      fifoId: "",
+      unit: selectedMaterial?.Unit || "kg"
+    }));
+
+    if (!materialId) {
+      setReturnBatches([]);
+      return;
+    }
+
+    fetchReturnBatches(materialId)
+      .then((response) => setReturnBatches(response.data || []))
+      .catch((error) => setReturnStatus({ type: "error", message: error.message }));
   };
 
   const handleWasteSubmit = async (event) => {
@@ -484,6 +538,45 @@ export default function InventoryPage({ company, onLogout, onBackHome }) {
       setWasteStatus({ type: "error", message: error.message });
     } finally {
       setSavingWaste(false);
+    }
+  };
+
+  const handleReturnSubmit = async (event) => {
+    event.preventDefault();
+    setSavingReturn(true);
+    setReturnStatus({ type: "", message: "" });
+
+    try {
+      const selectedMaterial = rawMaterials.find((item) => item.MaterialId === returnForm.materialId);
+      const selectedBatch = returnBatches.find((row) => row.FifoId === returnForm.fifoId);
+
+      if (!selectedMaterial || !selectedBatch) {
+        throw new Error("Select a material and stock batch.");
+      }
+
+      const payload = {
+        materialId: selectedMaterial.MaterialId,
+        materialName: selectedMaterial.MaterialName,
+        fifoId: selectedBatch.FifoId,
+        quantity: returnForm.quantity,
+        unit: returnForm.unit,
+        returnDate: returnForm.returnDate || undefined,
+        reason: returnForm.reason
+      };
+
+      const response = await createReturnStock(payload);
+      setReturnStocks((prev) => [response.data, ...prev]);
+      setReturnForm(initialReturnForm);
+      setReturnBatches([]);
+      setIsReturnModalOpen(false);
+
+      const refreshed = await fetchRawMaterials();
+      setRawMaterials(refreshed.data || []);
+      setReturnStatus({ type: "success", message: response.message });
+    } catch (error) {
+      setReturnStatus({ type: "error", message: error.message });
+    } finally {
+      setSavingReturn(false);
     }
   };
 
@@ -1285,7 +1378,7 @@ export default function InventoryPage({ company, onLogout, onBackHome }) {
                   >
                     Issue stock
                   </button>
-                ) : (
+                ) : stockFlow === "waste" ? (
                   <button
                     className="primary"
                     type="button"
@@ -1295,6 +1388,17 @@ export default function InventoryPage({ company, onLogout, onBackHome }) {
                     }}
                   >
                     Waste stock
+                  </button>
+                ) : (
+                  <button
+                    className="primary"
+                    type="button"
+                    onClick={() => {
+                      setReturnStatus({ type: "", message: "" });
+                      setIsReturnModalOpen(true);
+                    }}
+                  >
+                    Return stock
                   </button>
                 )}
                 <button
@@ -1343,6 +1447,16 @@ export default function InventoryPage({ company, onLogout, onBackHome }) {
                 >
                   Waste stock
                 </button>
+                <button
+                  className={`pill ${stockFlow === "return" ? "active" : ""}`}
+                  type="button"
+                  onClick={() => {
+                    setStockFlow("return");
+                    refreshReturnStocks();
+                  }}
+                >
+                  Return stock
+                </button>
               </div>
               {stockFlow === "add" ? (
                 <div className="panel-card">
@@ -1354,10 +1468,15 @@ export default function InventoryPage({ company, onLogout, onBackHome }) {
                   <h4>Issue Stock for Production</h4>
                   <p className="muted">Release materials for production and track consumption.</p>
                 </div>
-              ) : (
+              ) : stockFlow === "waste" ? (
                 <div className="panel-card">
                   <h4>Waste Stock</h4>
                   <p className="muted">Log damaged or expired materials for accurate balances.</p>
+                </div>
+              ) : (
+                <div className="panel-card">
+                  <h4>Return Stock</h4>
+                  <p className="muted">Send materials back to suppliers with return reasons.</p>
                 </div>
               )}
 
@@ -1369,6 +1488,9 @@ export default function InventoryPage({ company, onLogout, onBackHome }) {
               ) : null}
               {stockFlow === "waste" && wasteStatus.message ? (
                 <div className={`alert ${wasteStatus.type}`}>{wasteStatus.message}</div>
+              ) : null}
+              {stockFlow === "return" && returnStatus.message ? (
+                <div className={`alert ${returnStatus.type}`}>{returnStatus.message}</div>
               ) : null}
 
               {stockFlow === "add" && isStockModalOpen ? (
@@ -1667,6 +1789,110 @@ export default function InventoryPage({ company, onLogout, onBackHome }) {
                 </div>
               ) : null}
 
+              {stockFlow === "return" && isReturnModalOpen ? (
+                <div className="modal-overlay" role="dialog" aria-modal="true">
+                  <div className="modal">
+                    <div className="modal-header">
+                      <div>
+                        <h4>Return stock</h4>
+                        <p className="muted">Return a stock batch to the supplier with a reason.</p>
+                      </div>
+                      <button
+                        className="ghost"
+                        type="button"
+                        onClick={() => setIsReturnModalOpen(false)}
+                      >
+                        Close
+                      </button>
+                    </div>
+                    <form className="form material-form" onSubmit={handleReturnSubmit}>
+                      <label>
+                        Raw material
+                        <select
+                          name="materialId"
+                          value={returnForm.materialId}
+                          onChange={handleReturnMaterialChange}
+                          required
+                        >
+                          <option value="">Select material</option>
+                          {rawMaterials.map((material) => (
+                            <option key={material.MaterialId} value={material.MaterialId}>
+                              {material.MaterialName}
+                            </option>
+                          ))}
+                        </select>
+                      </label>
+                      <label>
+                        Stock batch (supplier/date)
+                        <select
+                          name="fifoId"
+                          value={returnForm.fifoId}
+                          onChange={handleReturnChange}
+                          required
+                        >
+                          <option value="">Select batch</option>
+                          {returnBatches.map((row) => (
+                            <option key={row.FifoId} value={row.FifoId}>
+                              {row.IntakeDate ? String(row.IntakeDate).slice(0, 10) : ""} -
+                              {" "}{row.SupplierName} -
+                              {" "}{row.RemainingQuantity} {row.Unit} @ LKR {Number(row.UnitPrice).toFixed(2)}
+                            </option>
+                          ))}
+                        </select>
+                      </label>
+                      <label>
+                        Quantity
+                        <input
+                          name="quantity"
+                          type="number"
+                          step="0.01"
+                          value={returnForm.quantity}
+                          onChange={handleReturnChange}
+                          required
+                        />
+                      </label>
+                      <label>
+                        Unit
+                        <input name="unit" value={returnForm.unit} onChange={handleReturnChange} />
+                      </label>
+                      <label>
+                        Return date
+                        <input
+                          name="returnDate"
+                          type="date"
+                          value={returnForm.returnDate}
+                          onChange={handleReturnChange}
+                        />
+                      </label>
+                      <label>
+                        Reason
+                        <textarea
+                          name="reason"
+                          value={returnForm.reason}
+                          onChange={handleReturnChange}
+                          rows={3}
+                          required
+                        />
+                      </label>
+                      <div className="total-pill">
+                        <span>Auto total</span>
+                        <strong>
+                          LKR {(() => {
+                            const selected = returnBatches.find((row) => row.FifoId === returnForm.fifoId);
+                            const unitPrice = Number(selected?.UnitPrice) || 0;
+                            const quantity = Number(returnForm.quantity) || 0;
+                            return (unitPrice * quantity).toFixed(2);
+                          })()}
+                        </strong>
+                      </div>
+                      <button className="primary" type="submit" disabled={savingReturn}>
+                        {savingReturn ? "Saving..." : "Return stock"}
+                      </button>
+                    </form>
+                  </div>
+                </div>
+              ) : null}
+
               {stockFlow === "add" ? (
                 <div className="stock-card-grid">
                   {stockIntakes.map((intake) => (
@@ -1717,7 +1943,7 @@ export default function InventoryPage({ company, onLogout, onBackHome }) {
                     </article>
                   ))}
                 </div>
-              ) : (
+              ) : stockFlow === "waste" ? (
                 <div className="stock-card-grid">
                   {wasteStocks.length === 0 ? (
                     <article className="stock-card">
@@ -1753,6 +1979,45 @@ export default function InventoryPage({ company, onLogout, onBackHome }) {
                           </div>
                         </div>
                         <span className="stock-total">LKR {waste.TotalCost}</span>
+                      </article>
+                    ))
+                  )}
+                </div>
+              ) : (
+                <div className="stock-card-grid">
+                  {returnStocks.length === 0 ? (
+                    <article className="stock-card">
+                      <div className="stock-card-header">
+                        <div>
+                          <h4>Return stock</h4>
+                          <p className="muted">No return records yet.</p>
+                        </div>
+                      </div>
+                    </article>
+                  ) : (
+                    returnStocks.map((record) => (
+                      <article key={record.ReturnId} className="stock-card">
+                        <div className="stock-card-header">
+                          <div>
+                            <h4>{record.MaterialName}</h4>
+                            <p className="muted">Supplier: {record.SupplierName}</p>
+                          </div>
+                          <span className="muted">
+                            {record.ReturnDate ? String(record.ReturnDate).slice(0, 10) : ""}
+                          </span>
+                        </div>
+                        <div className="stock-card-row">
+                          <div>
+                            <p className="muted">Quantity</p>
+                            <strong>{record.Quantity} {record.Unit}</strong>
+                          </div>
+                          <div>
+                            <p className="muted">Unit price</p>
+                            <strong>LKR {record.UnitPrice} / {record.Unit}</strong>
+                          </div>
+                        </div>
+                        <p className="muted">Reason: {record.Reason}</p>
+                        <span className="stock-total">LKR {record.TotalCost}</span>
                       </article>
                     ))
                   )}

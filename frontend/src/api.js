@@ -165,6 +165,28 @@ export async function fetchWasteStocks() {
   return data;
 }
 
+export async function fetchReturnStocks() {
+  const response = await fetch(`${API_BASE_URL}/api/return-stocks`);
+  const data = await response.json();
+  if (!response.ok) {
+    throw new Error(data?.message || "Failed to load return stocks");
+  }
+
+  return data;
+}
+
+export async function fetchReturnBatches(materialId) {
+  const response = await fetch(
+    `${API_BASE_URL}/api/return-stocks/batches?materialId=${encodeURIComponent(materialId)}`
+  );
+  const data = await response.json();
+  if (!response.ok) {
+    throw new Error(data?.message || "Failed to load return batches");
+  }
+
+  return data;
+}
+
 export async function createWasteStock(payload) {
   const response = await fetch(`${API_BASE_URL}/api/waste-stocks`, {
     method: "POST",
@@ -177,6 +199,23 @@ export async function createWasteStock(payload) {
   const data = await response.json();
   if (!response.ok) {
     throw new Error(data?.message || "Failed to create waste stock");
+  }
+
+  return data;
+}
+
+export async function createReturnStock(payload) {
+  const response = await fetch(`${API_BASE_URL}/api/return-stocks`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json"
+    },
+    body: JSON.stringify(payload)
+  });
+
+  const data = await response.json();
+  if (!response.ok) {
+    throw new Error(data?.message || "Failed to create return stock");
   }
 
   return data;

@@ -56,6 +56,52 @@ function buildPurchaseEmailBody(request, baseUrl) {
   };
 }
 
+function buildReturnStockEmailBody(record) {
+  const supplierName = record.SupplierName || "Supplier";
+  const quantityLine = `${record.Quantity} ${record.Unit}`;
+  const returnDate = record.ReturnDate
+    ? new Date(record.ReturnDate).toISOString().slice(0, 10)
+    : "";
+  const intakeDate = record.IntakeDate
+    ? new Date(record.IntakeDate).toISOString().slice(0, 10)
+    : "";
+
+  return {
+    text:
+      `Hello ${supplierName},\n\n` +
+      "We are returning the following stock batch:\n\n" +
+      `Material: ${record.MaterialName}\n` +
+      `Quantity: ${quantityLine}\n` +
+      `Unit price: ${Number(record.UnitPrice || 0).toFixed(2)}\n` +
+      `Total cost: ${Number(record.TotalCost || 0).toFixed(2)}\n` +
+      `Intake date: ${intakeDate}\n` +
+      `Return date: ${returnDate}\n` +
+      `Reason: ${record.Reason}\n` +
+      `Reference: ${record.ReturnId}\n\n` +
+      "Please acknowledge receipt of this return.",
+    html: `
+      <div style="font-family: Arial, sans-serif; color: #0f172a;">
+        <h2 style="margin: 0 0 8px;">Stock return notice</h2>
+        <p style="margin: 0 0 12px; color: #475569;">Hello ${supplierName},</p>
+        <p style="margin: 0 0 16px; color: #475569;">We are returning the following stock batch:</p>
+        <div style="border: 1px solid #e2e8f0; border-radius: 12px; padding: 16px; background: #f8fafc; margin-bottom: 16px;">
+          <ul style="margin: 0; padding-left: 18px; color: #0f172a;">
+            <li><strong>Material:</strong> ${record.MaterialName}</li>
+            <li><strong>Quantity:</strong> ${quantityLine}</li>
+            <li><strong>Unit price:</strong> ${Number(record.UnitPrice || 0).toFixed(2)}</li>
+            <li><strong>Total cost:</strong> ${Number(record.TotalCost || 0).toFixed(2)}</li>
+            <li><strong>Intake date:</strong> ${intakeDate}</li>
+            <li><strong>Return date:</strong> ${returnDate}</li>
+            <li><strong>Reason:</strong> ${record.Reason}</li>
+            <li><strong>Reference:</strong> ${record.ReturnId}</li>
+          </ul>
+        </div>
+        <p style="margin: 0; color: #475569;">Please acknowledge receipt of this return.</p>
+      </div>
+    `
+  };
+}
+
 async function sendPurchaseRequestEmail(request, supplierEmail) {
   const config = loadEmailConfig();
   const secure = Boolean(config.enableSsl && Number(config.port) === 465);
@@ -120,7 +166,34 @@ async function sendPasswordResetEmail(email, code) {
   });
 }
 
+async function sendReturnStockEmail(record) {
+  const config = loadEmailConfig();
+  const secure = Boolean(config.enableSsl && Number(config.port) === 465);
+  const transporter = nodemailer.createTransport({
+    host: config.host,
+    port: Number(config.port) || 587,
+    secure,
+    auth: {
+      user: config.userName,
+      pass: config.password
+    },
+    requireTLS: Boolean(config.enableSsl && Number(config.port) !== 465)
+  });
+
+  const body = buildReturnStockEmailBody(record);
+  const subject = `Stock return - ${record.MaterialName} (${record.Quantity} ${record.Unit})`;
+
+  await transporter.sendMail({
+    from: config.from,
+    to: record.SupplierEmail,
+    subject,
+    text: body.text,
+    html: body.html
+  });
+}
+
 module.exports = {
   sendPurchaseRequestEmail,
-  sendPasswordResetEmail
+  sendPasswordResetEmail,
+  sendReturnStockEmail
 };
