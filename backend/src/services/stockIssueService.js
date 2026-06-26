@@ -111,7 +111,10 @@ async function createStockIssue(payload) {
       remainingToIssue -= used;
 
       if (nextRemaining <= 0) {
-        await client.query("DELETE FROM public.fifo WHERE \"FifoId\" = $1", [row.FifoId]);
+        await client.query(
+          "UPDATE public.fifo SET \"RemainingQuantity\" = 0 WHERE \"FifoId\" = $1",
+          [row.FifoId]
+        );
       } else {
         await client.query(
           "UPDATE public.fifo SET \"RemainingQuantity\" = $2 WHERE \"FifoId\" = $1",

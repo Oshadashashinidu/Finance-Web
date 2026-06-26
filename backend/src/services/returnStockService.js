@@ -110,7 +110,10 @@ async function createReturnStock(payload) {
 
     const nextRemaining = available - quantity;
     if (nextRemaining <= 0) {
-      await client.query("DELETE FROM public.fifo WHERE \"FifoId\" = $1", [fifoRow.FifoId]);
+      await client.query(
+        "UPDATE public.fifo SET \"RemainingQuantity\" = 0 WHERE \"FifoId\" = $1",
+        [fifoRow.FifoId]
+      );
     } else {
       await client.query(
         "UPDATE public.fifo SET \"RemainingQuantity\" = $2 WHERE \"FifoId\" = $1",

@@ -73,7 +73,8 @@ async function computeSummaryForDate(summaryDate) {
       "(SELECT COUNT(*) FROM public.purchase_requests WHERE \"Status\" = 'Pending') AS pending_purchase_count, " +
       "(SELECT COALESCE(SUM(\"Quantity\"), 0) FROM public.stock_intakes WHERE \"IntakeDate\"::date = $1) AS stock_in_qty, " +
       "(SELECT COALESCE(SUM(\"Quantity\"), 0) FROM public.stock_issues WHERE \"IssueDate\"::date = $1) AS stock_out_qty, " +
-      "(SELECT COALESCE(SUM(quantity), 0) FROM public.waste_stocks WHERE wastedate::date = $1) AS waste_qty",
+      "(SELECT COALESCE(SUM(quantity), 0) FROM public.waste_stocks WHERE wastedate::date = $1) AS waste_qty, " +
+      "(SELECT COALESCE(SUM(\"Quantity\"), 0) FROM public.return_stocks WHERE \"ReturnDate\"::date = $1) AS return_qty",
     [summaryDate]
   );
 
@@ -88,7 +89,8 @@ async function computeSummaryForDate(summaryDate) {
     PendingPurchaseCount: Number(row.pending_purchase_count) || 0,
     StockInQty: Number(row.stock_in_qty) || 0,
     StockOutQty: Number(row.stock_out_qty) || 0,
-    WasteQty: Number(row.waste_qty) || 0
+    WasteQty: Number(row.waste_qty) || 0,
+    ReturnQty: Number(row.return_qty) || 0
   };
 }
 
@@ -115,7 +117,8 @@ async function computeChangeForDate(summaryDate) {
         OutOfStockCount: 0,
         StockInQty: 0,
         StockOutQty: 0,
-        WasteQty: 0
+        WasteQty: 0,
+        ReturnQty: 0
       };
 
   return {
@@ -126,7 +129,8 @@ async function computeChangeForDate(summaryDate) {
     OutOfStockDelta: currentSummary.OutOfStockCount - previousSummary.OutOfStockCount,
     StockInDelta: currentSummary.StockInQty - previousSummary.StockInQty,
     StockOutDelta: currentSummary.StockOutQty - previousSummary.StockOutQty,
-    WasteDelta: currentSummary.WasteQty - previousSummary.WasteQty
+    WasteDelta: currentSummary.WasteQty - previousSummary.WasteQty,
+    ReturnDelta: currentSummary.ReturnQty - previousSummary.ReturnQty
   };
 }
 
@@ -188,7 +192,7 @@ async function getSummaryForRange(range) {
   const summaries = [];
 
   for (const d of dates) {
-    const summaryDate = d.toISOString().slice(0, 10);
+    const summaryDate = toDateOnly(d);
     let summary;
     if (isTodayOrYesterday(summaryDate)) {
       summary = await inventorySummaryRepository.upsertSummary(

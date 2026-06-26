@@ -78,6 +78,20 @@ const initialPurchaseForm = {
   notes: ""
 };
 
+function getPreviousDate(dateValue) {
+  if (!dateValue) {
+    return "yesterday";
+  }
+
+  const date = new Date(`${dateValue}T00:00:00`);
+  date.setDate(date.getDate() - 1);
+
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
+}
+
 export default function InventoryPage({ company, onLogout, onBackHome }) {
   const [activeSection, setActiveSection] = useState("summary");
   const [rawMaterials, setRawMaterials] = useState([]);
@@ -128,7 +142,7 @@ export default function InventoryPage({ company, onLogout, onBackHome }) {
   const [expandedMaterialId, setExpandedMaterialId] = useState(null);
   const [materialFifoMap, setMaterialFifoMap] = useState({});
   const [materialFifoLoading, setMaterialFifoLoading] = useState({});
-  const [summaryRange, setSummaryRange] = useState("today");
+  const [summaryDate, setSummaryDate] = useState("");
   const [summaryData, setSummaryData] = useState(null);
   const [todaySummary, setTodaySummary] = useState(null);
   const [yesterdaySummary, setYesterdaySummary] = useState(null);
@@ -136,6 +150,7 @@ export default function InventoryPage({ company, onLogout, onBackHome }) {
   const [summaryList, setSummaryList] = useState([]);
   const [reorderAlerts, setReorderAlerts] = useState([]);
   const [pendingRequests, setPendingRequests] = useState([]);
+  const [approvedRequests, setApprovedRequests] = useState([]);
 
   const maxMaterialQuantity = Math.max(
     1,
@@ -260,7 +275,9 @@ export default function InventoryPage({ company, onLogout, onBackHome }) {
     if (activeSection !== "summary") {
       return;
     }
-    fetchInventorySummary(summaryRange)
+    const summaryQuery = summaryDate || "today";
+
+    fetchInventorySummary(summaryQuery)
       .then((response) => {
         setSummaryData(response.data?.summary || null);
         setSummaryList(response.data?.summaries || []);
@@ -269,9 +286,22 @@ export default function InventoryPage({ company, onLogout, onBackHome }) {
       })
       .catch((error) => setMaterialStatus({ type: "error", message: error.message }));
 
+    fetchPurchaseRequests()
+      .then((response) => {
+        const requests = response.data || [];
+        setApprovedRequests(
+          requests.filter((request) => String(request.Status || "").toLowerCase() === "approved")
+        );
+      })
+      .catch(() => setApprovedRequests([]));
+
+    fetchRawMaterials()
+      .then((response) => setRawMaterials(response.data || []))
+      .catch(() => {});
+
     Promise.all([
-      fetchInventorySummary("today"),
-      fetchInventorySummary("yesterday")
+      fetchInventorySummary(summaryDate || "today"),
+      fetchInventorySummary(getPreviousDate(summaryDate))
     ])
       .then(([todayResponse, yesterdayResponse]) => {
         setTodaySummary(todayResponse.data?.summary || null);
@@ -283,7 +313,7 @@ export default function InventoryPage({ company, onLogout, onBackHome }) {
         setYesterdaySummary(null);
         setSummaryChange(null);
       });
-  }, [activeSection, summaryRange]);
+  }, [activeSection, summaryDate]);
 
   useEffect(() => {
     if (activeSection === "stock") {
@@ -882,15 +912,12 @@ export default function InventoryPage({ company, onLogout, onBackHome }) {
                 </div>
                 <div className="summary-controls">
                   <label className="summary-select">
-                    Summary range
-                    <select
-                      value={summaryRange}
-                      onChange={(event) => setSummaryRange(event.target.value)}
-                    >
-                      <option value="today">Today</option>
-                      <option value="yesterday">Yesterday</option>
-                      <option value="last10">Last 10 days</option>
-                    </select>
+                    Summary date
+                    <input
+                      type="date"
+                      value={summaryDate}
+                      onChange={(event) => setSummaryDate(event.target.value)}
+                    />
                   </label>
                 </div>
               </section>
@@ -920,10 +947,18 @@ export default function InventoryPage({ company, onLogout, onBackHome }) {
                   <p className="summary-value info">{summaryData?.PendingPurchaseCount ?? 0}</p>
                   <p className="summary-helper">Requests</p>
                 </div>
+                <div className="summary-card accepted">
+                  <div className="summary-card-header">
+                    <span className="summary-icon success">✓</span>
+                    <p className="summary-label">Accepted orders</p>
+                  </div>
+                  <p className="summary-value success">{approvedRequests.length}</p>
+                  <p className="summary-helper">Approved</p>
+                </div>
               </section>
 
               <section className="summary-panels">
-                <div className="panel">
+                <div className="panel stock-status-panel">
                   <div className="panel-header">
                     <div>
                       <h3>Stock status</h3>
@@ -940,20 +975,52 @@ export default function InventoryPage({ company, onLogout, onBackHome }) {
                     const outPct = total ? (out / total) * 100 : 0;
 
                     return (
-                      <div className="status-chart">
-                        <div
-                          className="donut"
-                          style={{
-                            background: `conic-gradient(#22c55e 0% ${normalPct}%, #f59e0b ${normalPct}% ${normalPct + lowPct}%, #ef4444 ${normalPct + lowPct}% 100%)`
-                          }}
-                        >
-                          <span>{total || 0}</span>
-                          <small>Total</small>
+                      <div className="stock-status-body">
+                        <div className="status-chart">
+                          <div
+                            className="donut"
+                            style={{
+                              background: `conic-gradient(#22c55e 0% ${normalPct}%, #f59e0b ${normalPct}% ${normalPct + lowPct}%, #ef4444 ${normalPct + lowPct}% 100%)`
+                            }}
+                          >
+                            <span>{total || 0}</span>
+                            <small>Total</small>
+                          </div>
+                          <div className="status-legend">
+                            <div><span className="dot ok" /> Normal {normal}</div>
+                            <div><span className="dot low" /> Low {low}</div>
+                            <div><span className="dot out" /> Out {out}</div>
+                          </div>
                         </div>
-                        <div className="status-legend">
-                          <div><span className="dot ok" /> Normal {normal}</div>
-                          <div><span className="dot low" /> Low {low}</div>
-                          <div><span className="dot out" /> Out {out}</div>
+
+                        <div className="stock-level-chart">
+                          <h4>Stock level</h4>
+                          {rawMaterials.length === 0 ? (
+                            <p className="muted">No stock level data.</p>
+                          ) : (
+                            <div className="stock-level-bars" aria-label="Current stock level by material">
+                              {rawMaterials.slice(0, 8).map((item) => {
+                                const quantity = Number(item.CurrentQuantity) || 0;
+                                const height = Math.max(10, (quantity / maxMaterialQuantity) * 100);
+
+                                return (
+                                  <div key={item.MaterialId} className="stock-level-column">
+                                    <span className="stock-level-value">
+                                      {quantity.toLocaleString(undefined, { maximumFractionDigits: 1 })}
+                                    </span>
+                                    <div
+                                      className="stock-level-bar"
+                                      style={{ height: `${height}%` }}
+                                      title={`${item.MaterialName}: ${quantity} ${item.Unit || ""}`}
+                                    />
+                                    <span className="stock-level-name" title={item.MaterialName}>
+                                      {item.MaterialName}
+                                    </span>
+                                  </div>
+                                );
+                              })}
+                            </div>
+                          )}
                         </div>
                       </div>
                     );
@@ -995,7 +1062,7 @@ export default function InventoryPage({ company, onLogout, onBackHome }) {
                   <div className="approval-list">
                     {pendingRequests.length === 0 ? (
                       <p className="muted">No pending requests.</p>
-                    ) : pendingRequests.slice(0, 6).map((request) => (
+                    ) : pendingRequests.slice(0, 5).map((request) => (
                       <div key={request.RequestId} className="approval-item">
                         <span className="alert-icon pending">📌</span>
                         <div>
@@ -1005,6 +1072,31 @@ export default function InventoryPage({ company, onLogout, onBackHome }) {
                           </p>
                         </div>
                         <span className="approval-status pending">Pending</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                <div className="panel accepted-alert-panel">
+                  <div className="panel-header">
+                    <div>
+                      <h3>Order accept alerts</h3>
+                      <p className="muted">Supplier-approved purchase requests.</p>
+                    </div>
+                  </div>
+                  <div className="approval-list">
+                    {approvedRequests.length === 0 ? (
+                      <p className="muted">No approved orders yet.</p>
+                    ) : approvedRequests.slice(0, 5).map((request) => (
+                      <div key={request.RequestId} className="approval-item accepted">
+                        <span className="alert-icon accepted">✓</span>
+                        <div>
+                          <strong>{request.RawMaterialName}</strong>
+                          <p className="muted">
+                            {request.SupplierName} approved {request.RequestedQuantity} {request.Unit}
+                          </p>
+                        </div>
+                        <span className="approval-status approved">Approved</span>
                       </div>
                     ))}
                   </div>
@@ -1022,13 +1114,16 @@ export default function InventoryPage({ company, onLogout, onBackHome }) {
                       const stockIn = todaySummary?.StockInQty ?? summaryData?.StockInQty ?? 0;
                       const stockOut = todaySummary?.StockOutQty ?? summaryData?.StockOutQty ?? 0;
                       const wasteQty = todaySummary?.WasteQty ?? summaryData?.WasteQty ?? 0;
+                      const returnQty = todaySummary?.ReturnQty ?? summaryData?.ReturnQty ?? 0;
                       const yesterdayIn = yesterdaySummary?.StockInQty ?? 0;
                       const yesterdayOut = yesterdaySummary?.StockOutQty ?? 0;
                       const yesterdayWaste = yesterdaySummary?.WasteQty ?? 0;
+                      const yesterdayReturn = yesterdaySummary?.ReturnQty ?? 0;
 
                       const deltaIn = summaryChange?.StockInDelta ?? (stockIn - yesterdayIn);
                       const deltaOut = summaryChange?.StockOutDelta ?? (stockOut - yesterdayOut);
                       const deltaWaste = summaryChange?.WasteDelta ?? (wasteQty - yesterdayWaste);
+                      const deltaReturn = summaryChange?.ReturnDelta ?? (returnQty - yesterdayReturn);
 
                       const formatDelta = (value) => `${value >= 0 ? "+" : ""}${value} kg vs yesterday`;
 
@@ -1088,6 +1183,24 @@ export default function InventoryPage({ company, onLogout, onBackHome }) {
                         {formatDelta(deltaWaste)}
                       </span>
                     </button>
+                    <button
+                      className="flow-card"
+                      type="button"
+                      onClick={() => {
+                        setActiveSection("stock");
+                        setStockFlow("return");
+                      }}
+                    >
+                      <span className="flow-icon return">↩</span>
+                      <span className="flow-label">Return Stock</span>
+                      <div className="flow-value">
+                        <strong>{returnQty}</strong>
+                        <span className="muted">kg</span>
+                      </div>
+                      <span className={`flow-delta ${deltaReturn >= 0 ? "positive" : "negative"}`}>
+                        {formatDelta(deltaReturn)}
+                      </span>
+                    </button>
                         </>
                       );
                     })()}
@@ -1095,34 +1208,6 @@ export default function InventoryPage({ company, onLogout, onBackHome }) {
                 </div>
               </section>
 
-              {summaryRange === "last10" ? (
-                <section className="panel">
-                  <div className="panel-header">
-                    <div>
-                      <h3>Last 10 days</h3>
-                      <p className="muted">Daily summary snapshots.</p>
-                    </div>
-                  </div>
-                  <div className="table">
-                    <div className="table-row header five">
-                      <span>Date</span>
-                      <span>Total</span>
-                      <span>Low</span>
-                      <span>Pending</span>
-                      <span>Out</span>
-                    </div>
-                    {summaryList.map((row) => (
-                      <div key={row.SummaryDate} className="table-row five">
-                        <span>{row.SummaryDate}</span>
-                        <span>{row.TotalRawMaterials}</span>
-                        <span>{row.LowStockCount}</span>
-                        <span>{row.PendingPurchaseCount}</span>
-                        <span>{row.OutOfStockCount}</span>
-                      </div>
-                    ))}
-                  </div>
-                </section>
-              ) : null}
             </>
           ) : null}
 

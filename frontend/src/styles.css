@@ -615,28 +615,36 @@ input:focus {
 
 .summary-grid {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 14px;
+  grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+  gap: 12px;
+  align-items: stretch;
 }
 
 .summary-card-header {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 12px;
 }
 
 .summary-icon {
-  width: 36px;
-  height: 36px;
-  border-radius: 12px;
+  width: 34px;
+  height: 34px;
+  border-radius: 10px;
   display: grid;
   place-items: center;
   background: #f1f5ff;
-  font-size: 1rem;
+  font-size: 0.95rem;
+  flex: 0 0 auto;
 }
 
 .summary-icon.warning {
   background: #fef3c7;
+}
+
+.summary-icon.success {
+  background: #dcfce7;
+  color: #166534;
+  font-weight: 800;
 }
 
 .summary-toolbar {
@@ -667,8 +675,9 @@ input:focus {
 
 .summary-panels {
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-template-columns: repeat(2, minmax(320px, 1fr));
   gap: 16px;
+  align-items: stretch;
 }
 
 .status-chart {
@@ -676,7 +685,75 @@ input:focus {
   grid-template-columns: 180px 1fr;
   gap: 20px;
   align-items: center;
-  min-height: 220px;
+}
+
+.stock-status-panel {
+  align-content: stretch;
+}
+
+.stock-status-body {
+  display: grid;
+  grid-template-rows: auto 1fr;
+  gap: 18px;
+  height: 100%;
+}
+
+.stock-level-chart {
+  display: grid;
+  gap: 12px;
+  align-content: end;
+  min-height: 210px;
+}
+
+.stock-level-chart h4 {
+  margin: 0;
+  color: #475569;
+  font-size: 1rem;
+  font-weight: 700;
+  text-align: center;
+}
+
+.stock-level-bars {
+  min-height: 160px;
+  display: grid;
+  grid-auto-flow: column;
+  grid-auto-columns: minmax(58px, 1fr);
+  align-items: stretch;
+  gap: 6px;
+  border-bottom: 2px solid #e2e8f0;
+}
+
+.stock-level-column {
+  min-width: 0;
+  display: grid;
+  grid-template-rows: 22px 1fr 34px;
+  align-items: end;
+  justify-items: stretch;
+}
+
+.stock-level-value {
+  color: #334155;
+  font-size: 0.72rem;
+  font-weight: 700;
+  text-align: center;
+}
+
+.stock-level-bar {
+  min-height: 10px;
+  background: #4b74c5;
+  border-radius: 4px 4px 0 0;
+}
+
+.stock-level-name {
+  color: #64748b;
+  font-size: 0.68rem;
+  font-weight: 700;
+  line-height: 1.1;
+  overflow: hidden;
+  padding-top: 6px;
+  text-align: center;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .donut {
@@ -742,6 +819,9 @@ input:focus {
 .alert-list {
   display: grid;
   gap: 8px;
+  max-height: 398px;
+  overflow: auto;
+  padding-right: 2px;
 }
 
 .alert-item {
@@ -775,7 +855,7 @@ input:focus {
 
 .flow-grid {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 12px;
 }
 
@@ -821,6 +901,11 @@ input:focus {
   color: #c2410c;
 }
 
+.flow-icon.return {
+  background: #e0f2fe;
+  color: #0369a1;
+}
+
 .flow-value {
   display: flex;
   align-items: baseline;
@@ -851,20 +936,33 @@ input:focus {
 
 .summary-card {
   background: #ffffff;
-  border-radius: 20px;
-  padding: 12px 14px;
-  box-shadow: 0 18px 40px rgba(15, 23, 42, 0.08);
+  border: 1px solid rgba(148, 163, 184, 0.16);
+  border-left: 4px solid #c7d2fe;
+  border-radius: 14px;
+  padding: 14px 16px;
+  box-shadow: 0 12px 28px rgba(15, 23, 42, 0.06);
+  min-height: 104px;
+  display: grid;
+  align-content: space-between;
+  gap: 8px;
+}
+
+.summary-card.accepted {
+  border-color: rgba(34, 197, 94, 0.22);
+  border-left-color: #22c55e;
 }
 
 .summary-label {
   margin: 0;
-  font-size: 0.95rem;
-  color: #64748b;
+  font-size: 0.86rem;
+  color: #475569;
+  font-weight: 700;
 }
 
 .summary-value {
-  margin: 4px 0 2px;
-  font-size: 1.3rem;
+  margin: 0;
+  font-size: 1.55rem;
+  line-height: 1;
   font-weight: 700;
 }
 
@@ -882,7 +980,8 @@ input:focus {
 
 .summary-helper {
   margin: 0;
-  font-size: 0.8rem;
+  font-size: 0.76rem;
+  font-weight: 600;
   color: #94a3b8;
 }
 
@@ -908,6 +1007,11 @@ input:focus {
   border: 1px solid rgba(148, 163, 184, 0.2);
 }
 
+.approval-item.accepted {
+  background: #f0fdf4;
+  border-color: rgba(34, 197, 94, 0.28);
+}
+
 .approval-item .muted {
   margin: 4px 0 0;
 }
@@ -919,6 +1023,21 @@ input:focus {
   border-radius: 999px;
   font-size: 0.7rem;
   font-weight: 700;
+}
+
+.approval-status.approved {
+  background: #dcfce7;
+  color: #166534;
+}
+
+.alert-icon.accepted {
+  background: #bbf7d0;
+  color: #166534;
+  font-weight: 800;
+}
+
+.accepted-alert-panel {
+  border: 1px solid rgba(34, 197, 94, 0.18);
 }
 
 .material-chart {
@@ -1528,6 +1647,7 @@ input:focus {
   .material-form {
     grid-template-columns: 1fr 1fr;
   }
+}
 
 
 @media (max-width: 600px) {
@@ -1629,7 +1749,7 @@ input:focus {
   .material-form {
     grid-template-columns: 1fr;
   }
-}
+
   .toggle {
     width: 100%;
     justify-content: center;

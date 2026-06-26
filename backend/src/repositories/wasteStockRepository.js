@@ -3,11 +3,11 @@ const { getPool } = require("../config/database");
 async function listWasteStocks() {
   const pool = getPool();
   const result = await pool.query(
-    "SELECT \"WasteId\" AS \"WasteId\", \"MaterialId\" AS \"MaterialId\", \"MaterialName\" AS \"MaterialName\", " +
-      "\"FifoId\" AS \"FifoId\", \"Quantity\" AS \"Quantity\", \"Unit\" AS \"Unit\", " +
-      "\"UnitPrice\" AS \"UnitPrice\", \"TotalCost\" AS \"TotalCost\", \"IntakeDate\" AS \"IntakeDate\", " +
-      "\"WasteDate\" AS \"WasteDate\", \"CreatedAt\" AS \"CreatedAt\" " +
-      "FROM public.waste_stocks ORDER BY \"WasteDate\" DESC, \"CreatedAt\" DESC"
+    "SELECT wasteid AS \"WasteId\", materialid AS \"MaterialId\", materialname AS \"MaterialName\", " +
+      "fifoid AS \"FifoId\", quantity AS \"Quantity\", unit AS \"Unit\", " +
+      "unitprice AS \"UnitPrice\", totalcost AS \"TotalCost\", intakedate AS \"IntakeDate\", " +
+      "wastedate AS \"WasteDate\", createdat AS \"CreatedAt\" " +
+      "FROM public.waste_stocks ORDER BY wastedate DESC, createdat DESC"
   );
 
   return result.rows;
@@ -15,8 +15,8 @@ async function listWasteStocks() {
 
 async function createWasteStock(payload, client) {
   const result = await client.query(
-    "INSERT INTO public.waste_stocks (\"WasteId\", \"MaterialId\", \"MaterialName\", \"FifoId\", " +
-      "\"Quantity\", \"Unit\", \"UnitPrice\", \"TotalCost\", \"IntakeDate\", \"WasteDate\") " +
+    "INSERT INTO public.waste_stocks (wasteid, materialid, materialname, fifoid, " +
+      "quantity, unit, unitprice, totalcost, intakedate, wastedate) " +
       "VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)",
     [
       payload.WasteId,

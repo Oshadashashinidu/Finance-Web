@@ -276,7 +276,10 @@ export async function fetchPurchaseRequests() {
 }
 
 export async function fetchInventorySummary(range) {
-  const response = await fetch(`${API_BASE_URL}/api/inventory-summary?range=${encodeURIComponent(range)}`);
+  const queryKey = /^\d{4}-\d{2}-\d{2}$/.test(range) ? "date" : "range";
+  const response = await fetch(
+    `${API_BASE_URL}/api/inventory-summary?${queryKey}=${encodeURIComponent(range)}`
+  );
   const data = await response.json();
   if (!response.ok) {
     throw new Error(data?.message || "Failed to load inventory summary");

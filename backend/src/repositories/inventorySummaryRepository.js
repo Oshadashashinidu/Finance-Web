@@ -7,7 +7,7 @@ async function getSummaryByDate(summaryDate) {
       "low_stock_count AS \"LowStockCount\", equal_stock_count AS \"EqualStockCount\", " +
       "ok_stock_count AS \"OkStockCount\", out_of_stock_count AS \"OutOfStockCount\", " +
       "pending_purchase_count AS \"PendingPurchaseCount\", stock_in_qty AS \"StockInQty\", " +
-      "stock_out_qty AS \"StockOutQty\", waste_qty AS \"WasteQty\", " +
+      "stock_out_qty AS \"StockOutQty\", waste_qty AS \"WasteQty\", return_qty AS \"ReturnQty\", " +
       "created_at AS \"CreatedAt\", updated_at AS \"UpdatedAt\" " +
       "FROM public.inventory_daily_summaries WHERE summary_date = $1",
     [summaryDate]
@@ -21,8 +21,8 @@ async function upsertSummary(summary) {
   const result = await pool.query(
     "INSERT INTO public.inventory_daily_summaries (summary_date, total_raw_materials, low_stock_count, " +
       "equal_stock_count, ok_stock_count, out_of_stock_count, pending_purchase_count, " +
-      "stock_in_qty, stock_out_qty, waste_qty) " +
-      "VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10) " +
+      "stock_in_qty, stock_out_qty, waste_qty, return_qty) " +
+      "VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11) " +
       "ON CONFLICT (summary_date) DO UPDATE SET " +
       "total_raw_materials = EXCLUDED.total_raw_materials, " +
       "low_stock_count = EXCLUDED.low_stock_count, " +
@@ -33,12 +33,13 @@ async function upsertSummary(summary) {
       "stock_in_qty = EXCLUDED.stock_in_qty, " +
       "stock_out_qty = EXCLUDED.stock_out_qty, " +
       "waste_qty = EXCLUDED.waste_qty, " +
+      "return_qty = EXCLUDED.return_qty, " +
       "updated_at = now() " +
       "RETURNING summary_date AS \"SummaryDate\", total_raw_materials AS \"TotalRawMaterials\", " +
       "low_stock_count AS \"LowStockCount\", equal_stock_count AS \"EqualStockCount\", " +
       "ok_stock_count AS \"OkStockCount\", out_of_stock_count AS \"OutOfStockCount\", " +
       "pending_purchase_count AS \"PendingPurchaseCount\", stock_in_qty AS \"StockInQty\", " +
-      "stock_out_qty AS \"StockOutQty\", waste_qty AS \"WasteQty\", " +
+      "stock_out_qty AS \"StockOutQty\", waste_qty AS \"WasteQty\", return_qty AS \"ReturnQty\", " +
       "created_at AS \"CreatedAt\", updated_at AS \"UpdatedAt\"",
     [
       summary.SummaryDate,
@@ -50,7 +51,8 @@ async function upsertSummary(summary) {
       summary.PendingPurchaseCount,
       summary.StockInQty,
       summary.StockOutQty,
-      summary.WasteQty
+      summary.WasteQty,
+      summary.ReturnQty
     ]
   );
 
@@ -64,7 +66,7 @@ async function listSummariesByDateRange(startDate, endDate) {
       "low_stock_count AS \"LowStockCount\", equal_stock_count AS \"EqualStockCount\", " +
       "ok_stock_count AS \"OkStockCount\", out_of_stock_count AS \"OutOfStockCount\", " +
       "pending_purchase_count AS \"PendingPurchaseCount\", stock_in_qty AS \"StockInQty\", " +
-      "stock_out_qty AS \"StockOutQty\", waste_qty AS \"WasteQty\" " +
+      "stock_out_qty AS \"StockOutQty\", waste_qty AS \"WasteQty\", return_qty AS \"ReturnQty\" " +
       "FROM public.inventory_daily_summaries " +
       "WHERE summary_date BETWEEN $1 AND $2 " +
       "ORDER BY summary_date DESC",
