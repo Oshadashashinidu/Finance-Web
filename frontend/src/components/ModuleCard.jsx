@@ -1,8 +1,8 @@
 const CARD_IMAGES = {
   Inventory: "/inventory.png",
-  Production: "/production.png",
-  Sales: "/sales.png",
-  Financials: "/financials.png"
+  Production: "/inventory.png",
+  Sales: "/inventory.png",
+  Financials: "/inventory.png"
 };
 
 export default function ModuleCard({ title, description, onClick }) {

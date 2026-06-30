@@ -1237,8 +1237,8 @@ export default function InventoryPage({ company, onLogout, onBackHome }) {
               ) : null}
 
               {isMaterialModalOpen ? (
-                <div className="modal-overlay" role="dialog" aria-modal="true">
-                  <div className="modal">
+                <div className="modal-overlay stock-modal-overlay" role="dialog" aria-modal="true">
+                  <div className="modal stock-flow-modal">
                     <div className="modal-header">
                       <div>
                         <h4>Add raw material</h4>
@@ -1579,8 +1579,8 @@ export default function InventoryPage({ company, onLogout, onBackHome }) {
               ) : null}
 
               {stockFlow === "add" && isStockModalOpen ? (
-                <div className="modal-overlay" role="dialog" aria-modal="true">
-                  <div className="modal">
+                <div className="modal-overlay stock-modal-overlay" role="dialog" aria-modal="true">
+                  <div className="modal stock-flow-modal">
                     <div className="modal-header">
                       <div>
                         <h4>Add stock intake</h4>
@@ -1673,8 +1673,8 @@ export default function InventoryPage({ company, onLogout, onBackHome }) {
               ) : null}
 
               {stockFlow === "issue" && isIssueModalOpen ? (
-                <div className="modal-overlay" role="dialog" aria-modal="true">
-                  <div className="modal">
+                <div className="modal-overlay stock-modal-overlay" role="dialog" aria-modal="true">
+                  <div className="modal stock-flow-modal">
                     <div className="modal-header">
                       <div>
                         <h4>Issue stock</h4>
@@ -1782,8 +1782,8 @@ export default function InventoryPage({ company, onLogout, onBackHome }) {
               ) : null}
 
               {stockFlow === "waste" && isWasteModalOpen ? (
-                <div className="modal-overlay" role="dialog" aria-modal="true">
-                  <div className="modal">
+                <div className="modal-overlay stock-modal-overlay" role="dialog" aria-modal="true">
+                  <div className="modal stock-flow-modal">
                     <div className="modal-header">
                       <div>
                         <h4>Waste stock</h4>
