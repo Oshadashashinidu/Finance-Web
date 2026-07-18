@@ -40,4 +40,7 @@ npm run dev
 ## Notes
 
 - The signup form includes an image upload. The backend currently accepts the image fields but does not store them because the companies table does not include image columns.
-Testing a pull request without review.
+## About this repository
+
+This is a app include sales, finance, inventory management and the production
+  
