@@ -43,5 +43,5 @@ npm run dev
 ## About this repository
 
 This is a app include sales, finance, inventory management and the production
-Updated on 7/19/2026
+
   
