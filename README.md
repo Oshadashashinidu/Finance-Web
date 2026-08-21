@@ -1,158 +1,220 @@
 <div align="center">
-  <img src="Assets/logo.png" alt="FIMA logo" width="108" />
-  <h1>FIMA — Smart Finance Management</h1>
-  <p><strong>A connected operations workspace for inventory, suppliers, purchasing, and finance-aware business decisions.</strong></p>
-  <p>
-    <a href="https://react.dev/"><img src="https://img.shields.io/badge/React-18-61DAFB?logo=react&amp;logoColor=white" alt="React 18" /></a>
-    <a href="https://vite.dev/"><img src="https://img.shields.io/badge/Vite-5-646CFF?logo=vite&amp;logoColor=white" alt="Vite 5" /></a>
-    <a href="https://nodejs.org/"><img src="https://img.shields.io/badge/Node.js-18%2B-339933?logo=nodedotjs&amp;logoColor=white" alt="Node.js 18+" /></a>
-    <a href="https://expressjs.com/"><img src="https://img.shields.io/badge/Express-4-000000?logo=express&amp;logoColor=white" alt="Express 4" /></a>
-    <a href="https://www.postgresql.org/"><img src="https://img.shields.io/badge/PostgreSQL-Database-4169E1?logo=postgresql&amp;logoColor=white" alt="PostgreSQL" /></a>
-  </p>
-  <p>
-    <a href="https://financeweb-24k3fxgwy-oshada-s-projects.vercel.app/">Live demo</a> ·
-    <a href="#-features">Features</a> ·
-    <a href="#-quick-start">Quick start</a> ·
-    <a href="#-api-reference">API</a>
-  </p>
+  <img src="Assets/logo.png" alt="FIMA logo" width="110" />
+
+  # FIMA — Smart Finance Management
+
+  **A connected operations workspace for inventory, suppliers, purchasing, and finance-aware decisions.**
+
+  [![React](https://img.shields.io/badge/React-18-61DAFB?logo=react&logoColor=white)](https://react.dev/)
+  [![Vite](https://img.shields.io/badge/Vite-5-646CFF?logo=vite&logoColor=white)](https://vite.dev/)
+  [![Node.js](https://img.shields.io/badge/Node.js-18%2B-339933?logo=nodedotjs&logoColor=white)](https://nodejs.org/)
+  [![Express](https://img.shields.io/badge/Express-4-111111?logo=express&logoColor=white)](https://expressjs.com/)
+  [![PostgreSQL](https://img.shields.io/badge/PostgreSQL-Database-4169E1?logo=postgresql&logoColor=white)](https://www.postgresql.org/)
+
+  [Live demo](https://financeweb-24k3fxgwy-oshada-s-projects.vercel.app/) · [Features](#features) · [Architecture](#architecture) · [Quick start](#quick-start) · [API](#api-reference)
 </div>
 
 <br />
 
-<img src="Assets/image%204.png" alt="FIMA smart finance management banner" width="100%" />
+<img src="Assets/image%204.png" alt="FIMA dashboard banner" width="100%" />
 
-## Overview
+## About FIMA
 
-FIMA is a full-stack business operations platform built for growing companies. It combines company onboarding with a detailed inventory control system, supplier and purchase-request workflows, daily operational summaries, and an AI-assisted market insights panel.
+FIMA is a full-stack business operations platform for tracking raw materials from purchase request to consumption. It combines company onboarding, supplier management, FIFO inventory costing, stock movement, operational summaries, email workflows, and an AI-assisted market insights panel in one interface.
 
-The current release focuses on the **Inventory** module. Production, Sales, and Financials are represented in the product shell and are planned for future releases.
+> **Current scope:** Inventory is the active module. Production, Sales, and Financials are visible in the application shell and remain on the roadmap.
 
-## ✨ Features
+## Features
 
-| Area | Capabilities | Status |
+| Area | What FIMA provides | Status |
 | --- | --- | :---: |
-| Company access | Multi-step registration, secure password hashing, login, email verification codes, and password reset | ✅ |
-| Inventory overview | Daily/range summaries, stock status, reorder alerts, purchase alerts, and flow metrics | ✅ |
-| Raw materials | Create materials, track quantities, reorder thresholds, units, cost, and status | ✅ |
-| Stock movement | Record intake, production issues, waste, and supplier returns | ✅ |
-| FIFO costing | Maintain intake batches and calculate issue, waste, and return costs from the oldest available stock | ✅ |
-| Suppliers | Maintain supplier contact details and material associations | ✅ |
-| Purchase requests | Email suppliers with expiring approve/reject links and track request status | ✅ |
-| Market assistant | Ask concise questions about trends, pricing, and business insights through Groq | ✅ |
-| Production, Sales, Financials | Connected modules shown in the dashboard shell | 🛣️ Roadmap |
+| Company access | Registration, bcrypt password hashing, login, email reset codes, and password reset | ✅ |
+| Inventory overview | Daily/range summaries, stock health, reorder alerts, purchase alerts, and flow metrics | ✅ |
+| Raw materials | Quantities, units, costs, reorder thresholds, total value, and status | ✅ |
+| Stock movement | Intake, production issues, waste, and supplier returns | ✅ |
+| FIFO costing | Batch tracking and oldest-stock-first costing for every outgoing movement | ✅ |
+| Suppliers | Contact details and material associations | ✅ |
+| Purchase requests | Email requests with expiring approve/reject links and status tracking | ✅ |
+| Market assistant | Trend, pricing, and business insights through Groq | ✅ |
+| Production, Sales, Financials | Connected modules in the dashboard shell | 🛣️ Planned |
 
-## 🖼️ Product modules
+## Product modules
 
 <table>
   <tr>
-    <td align="center" width="25%"><img src="Assets/inventory.png" alt="Inventory module" width="150" /><br /><strong>Inventory</strong><br /><sub>Materials, stock flow, FIFO, suppliers</sub></td>
-    <td align="center" width="25%"><img src="Assets/production.png" alt="Production module" width="180" /><br /><strong>Production</strong><br /><sub>Recipes, requirements, costing</sub></td>
-    <td align="center" width="25%"><img src="Assets/sales.png" alt="Sales module" width="180" /><br /><strong>Sales</strong><br /><sub>Revenue and customer activity</sub></td>
-    <td align="center" width="25%"><img src="Assets/financials.png" alt="Financials module" width="180" /><br /><strong>Financials</strong><br /><sub>Accounts, transactions, cash flow</sub></td>
+    <td align="center" width="25%"><img src="Assets/inventory.png" alt="Inventory module" width="145" /><br /><strong>Inventory</strong><br /><sub>Materials, FIFO, suppliers, stock flow</sub></td>
+    <td align="center" width="25%"><img src="Assets/production.png" alt="Production module" width="170" /><br /><strong>Production</strong><br /><sub>Recipes, requirements, costing</sub></td>
+    <td align="center" width="25%"><img src="Assets/sales.png" alt="Sales module" width="170" /><br /><strong>Sales</strong><br /><sub>Revenue and customer activity</sub></td>
+    <td align="center" width="25%"><img src="Assets/financials.png" alt="Financials module" width="170" /><br /><strong>Financials</strong><br /><sub>Accounts, transactions, cash flow</sub></td>
   </tr>
 </table>
 
-## 🏗️ Architecture
+## Architecture
+
+<div align="center">
+  <img src="Assets/architecture-flow.svg" alt="Animated FIMA architecture data-flow diagram" width="100%" />
+</div>
+
+The backend follows a `route → controller → service → repository` design. Routes define the HTTP surface, controllers translate requests, services enforce workflows, and repositories isolate PostgreSQL queries.
 
 ```mermaid
 flowchart LR
-    U[Business user] -->|HTTPS| UI[React 18 + Vite SPA]
-    UI -->|JSON / REST| API[Express API]
-
-    subgraph Backend[Node.js backend]
-        API --> C[Controllers]
-        C --> S[Business services]
-        S --> R[Repositories]
-    end
-
-    R -->|SQL via pg| DB[(PostgreSQL)]
-    S -->|SMTP| MAIL[Supplier & reset emails]
-    S -->|Chat completion| GROQ[Groq API]
-
-    DB --- D1[Companies & reset codes]
-    DB --- D2[Materials, FIFO & stock events]
-    DB --- D3[Suppliers & purchase requests]
-    DB --- D4[Daily inventory summaries]
+    Browser[React + Vite SPA] -->|JSON / REST| Routes[Express routes]
+    Routes --> Controllers
+    Controllers --> Services
+    Services --> Repositories
+    Repositories --> DB[(PostgreSQL)]
+    Services --> SMTP[SMTP email]
+    Services --> Groq[Groq API]
 ```
-
-The backend follows a layered `route → controller → service → repository` design. Controllers translate HTTP requests, services enforce workflow rules, and repositories contain PostgreSQL access.
 
 ### Inventory lifecycle
 
+<div align="center">
+  <img src="Assets/inventory-lifecycle.svg" alt="Animated inventory and FIFO lifecycle diagram" width="100%" />
+</div>
+
+FIFO is the center of inventory valuation. Each intake creates a costed batch; issues, waste, and supplier returns reduce the oldest eligible batch before material balances and daily summaries are updated.
+
+### Core data model
+
 ```mermaid
-flowchart TD
-    M[Create raw material] --> S{Stock source}
-    S -->|Supplier delivery| I[Record stock intake]
-    I --> F[Create FIFO batch]
-    F --> Q[Increase on-hand quantity and value]
-    Q --> D{Operational decision}
-    D -->|Use in production| O[Issue oldest FIFO stock]
-    D -->|Damaged or expired| W[Record FIFO waste]
-    D -->|Return to supplier| R[Record batch return]
-    O --> U[Update balances and daily summary]
-    W --> U
-    R --> E[Email supplier]
-    E --> U
-    U --> L{At or below reorder level?}
-    L -->|Yes| P[Create purchase request]
-    P --> A[Supplier approves or rejects by secure link]
-    L -->|No| Q
+erDiagram
+    RAW_MATERIALS {
+      text MaterialId PK
+      numeric CurrentQuantity
+      numeric ReorderLevel
+      numeric UnitCost
+    }
+    SUPPLIERS {
+      text SupplierId PK
+      text Email
+    }
+    SUPPLIER_MATERIALS {
+      text MaterialLinkId PK
+      text SupplierId FK
+      text MaterialName
+    }
+    PURCHASE_REQUESTS {
+      text RequestId PK
+      text SupplierId FK
+      text Status
+      uuid action_token
+    }
+    STOCK_INTAKES {
+      text IntakeId PK
+      text MaterialId FK
+      text SupplierId FK
+      numeric Quantity
+    }
+    FIFO {
+      text FifoId PK
+      text IntakeId FK
+      text MaterialId FK
+      numeric RemainingQuantity
+    }
+    STOCK_ISSUES {
+      text IssueId PK
+      text MaterialId FK
+    }
+    WASTE_STOCKS {
+      text wasteid PK
+      text fifoid FK
+    }
+    RETURN_STOCKS {
+      text ReturnId PK
+      text FifoId FK
+      text SupplierId FK
+    }
+
+    SUPPLIERS ||--o{ SUPPLIER_MATERIALS : supplies
+    SUPPLIERS ||--o{ PURCHASE_REQUESTS : receives
+    SUPPLIERS ||--o{ STOCK_INTAKES : delivers
+    RAW_MATERIALS ||--o{ STOCK_INTAKES : receives
+    STOCK_INTAKES ||--|| FIFO : creates
+    RAW_MATERIALS ||--o{ FIFO : batches
+    RAW_MATERIALS ||--o{ STOCK_ISSUES : consumed_as
+    FIFO ||--o{ WASTE_STOCKS : records
+    FIFO ||--o{ RETURN_STOCKS : returned_from
+    SUPPLIERS ||--o{ RETURN_STOCKS : receives
 ```
 
-## 🧰 Technology stack
+### Purchase approval sequence
+
+```mermaid
+sequenceDiagram
+    actor User
+    participant UI as React UI
+    participant API as Express API
+    participant DB as PostgreSQL
+    participant Mail as SMTP
+    actor Supplier
+
+    User->>UI: Create purchase request
+    UI->>API: POST /api/purchase-requests
+    API->>DB: Save request + expiring token
+    API->>Mail: Send approve/reject links
+    Mail-->>Supplier: Purchase request email
+    Supplier->>API: Open action link
+    API->>DB: Validate token and update status
+    API-->>Supplier: Show action result
+    UI->>API: GET /api/purchase-requests
+    API-->>UI: Latest request status
+```
+
+## Technology
 
 | Layer | Technology |
 | --- | --- |
-| Frontend | React 18, Vite 5, native Fetch API, custom CSS |
+| Frontend | React 18, Vite 5, Fetch API, custom CSS |
 | Backend | Node.js, Express 4, CommonJS |
-| Database | PostgreSQL with `pg` connection pooling |
-| Authentication | `bcryptjs` password hashing and company registration number login |
+| Data | PostgreSQL and `pg` connection pooling |
+| Authentication | `bcryptjs` and company registration number login |
 | Email | Nodemailer over SMTP |
-| AI assistant | Groq OpenAI-compatible chat completions API |
-| IDs | UUID v4 |
+| AI assistant | Groq OpenAI-compatible chat completions |
 | Deployment | Vercel multi-service configuration |
 
-## 📁 Project structure
+## Project structure
 
 ```text
 Finance-Web/
-├── Assets/                 # README and brand imagery
+├── Assets/                   # README imagery and animated diagrams
 ├── backend/
-│   ├── config/             # Local JSON configuration
+│   ├── config/               # Local JSON configuration
 │   └── src/
-│       ├── config/         # Database and email config loaders
-│       ├── controllers/    # HTTP handlers
-│       ├── repositories/   # PostgreSQL queries
-│       ├── routes/         # Express routes
-│       ├── services/       # Business rules and integrations
-│       └── server.js       # API entry point
+│       ├── config/           # Database and email config loaders
+│       ├── controllers/      # HTTP handlers
+│       ├── repositories/     # PostgreSQL queries
+│       ├── routes/           # REST endpoints
+│       ├── services/         # Workflows and integrations
+│       └── server.js         # Express entry point
 ├── database/
-│   └── schema.sql          # Current schema reference
+│   └── schema.sql            # Schema reference snapshot
 ├── frontend/
-│   ├── public/             # Runtime application images
+│   ├── public/               # Application images
 │   └── src/
-│       ├── components/     # Shared React components
-│       ├── pages/          # Auth, home, and inventory views
-│       ├── api.js          # Frontend API client
-│       └── styles.css      # Application styling
+│       ├── components/       # Shared React components
+│       ├── pages/            # Auth, home, inventory
+│       ├── api.js            # Browser API client
+│       └── styles.css        # Application styling
 ├── vercel.json
 └── README.md
 ```
 
-## 🚀 Quick start
+## Quick start
 
 ### Prerequisites
 
-- Node.js 18 or newer
+- Node.js 18+
 - npm
-- A PostgreSQL database
+- PostgreSQL
 - SMTP credentials for email workflows
-- A Groq API key for the market assistant (optional if chat is not used)
+- A Groq API key if the market assistant is required
 
 ### 1. Clone and install
 
 ```bash
-git clone <your-repository-url>
+git clone https://github.com/Oshadashashinidu/Finance-Web.git
 cd Finance-Web
 
 cd backend
@@ -164,38 +226,31 @@ npm install
 
 ### 2. Prepare PostgreSQL
 
-Provision a PostgreSQL database containing the tables described in [`database/schema.sql`](database/schema.sql). The file is currently a **schema reference snapshot**: review table order and constraints before using it as a migration in a new database.
+Create a PostgreSQL database matching [`database/schema.sql`](database/schema.sql). The file is a schema reference snapshot, so review its table order and constraints before treating it as a migration.
 
-### 3. Configure the backend
-
-The API accepts environment variables or the JSON files in `backend/config/`. Environment variables take precedence when `overrideEnv` is enabled.
+### 3. Configure the API
 
 Create `backend/.env`:
 
 ```dotenv
 PORT=8080
 
-# Database — use DATABASE_URL or the individual POSTGRES_* values
+# Use DATABASE_URL or the individual POSTGRES_* variables
 DATABASE_URL=postgresql://postgres:password@localhost:5432/fima
 POSTGRES_SSL=false
 POSTGRES_SSL_REJECT_UNAUTHORIZED=false
 
-# SMTP email
 EMAIL_HOST=smtp.example.com
 EMAIL_PORT=587
 EMAIL_ENABLE_SSL=true
 EMAIL_USERNAME=your-smtp-user
 EMAIL_PASSWORD=your-smtp-password
 EMAIL_FROM=FIMA <no-reply@example.com>
-EMAIL_SUBJECT=Purchase Request
 PURCHASE_ACTION_BASE_URL=http://localhost:8080/api/purchase-requests/action
 
-# Market assistant
 GROQ_API_KEY=your-groq-api-key
 GROQ_MODEL=llama-3.1-8b-instant
 ```
-
-> Never commit real database, SMTP, or API credentials. Keep production secrets in your deployment platform's environment settings.
 
 ### 4. Configure the frontend
 
@@ -205,108 +260,107 @@ Create `frontend/.env`:
 VITE_API_BASE_URL=http://localhost:8080
 ```
 
-### 5. Run both services
+### 5. Run FIMA
 
-Open two terminals from the repository root.
+Start the API and frontend in separate terminals:
 
 ```bash
-# Terminal 1 — API at http://localhost:8080
+# Terminal 1 — http://localhost:8080
 cd backend
 npm start
 ```
 
 ```bash
-# Terminal 2 — Vite development server
+# Terminal 2 — normally http://localhost:5173
 cd frontend
 npm run dev
 ```
 
-Open the URL printed by Vite (normally `http://localhost:5173`). Check API availability at `http://localhost:8080/health`.
+Open the URL printed by Vite. Check the API at `http://localhost:8080/health`.
 
-## ⚙️ Environment reference
+## Environment variables
 
 | Variable | Required | Default | Purpose |
 | --- | :---: | --- | --- |
 | `PORT` | No | `8080` | Express server port |
 | `DATABASE_URL` | Yes* | — | PostgreSQL connection string |
-| `POSTGRES_HOST`, `POSTGRES_USER`, `POSTGRES_PASSWORD`, `POSTGRES_DATABASE`, `POSTGRES_PORT` | Yes* | Mixed | Alternative database configuration |
-| `POSTGRES_SSL` | No | `true` | Enable TLS for PostgreSQL |
+| `POSTGRES_HOST`, `POSTGRES_USER`, `POSTGRES_PASSWORD`, `POSTGRES_DATABASE`, `POSTGRES_PORT` | Yes* | Mixed | Individual database settings |
+| `POSTGRES_SSL` | No | `true` | Enable PostgreSQL TLS |
 | `POSTGRES_SSL_REJECT_UNAUTHORIZED` | No | `false` | Verify the database TLS certificate |
-| `EMAIL_HOST`, `EMAIL_USERNAME`, `EMAIL_PASSWORD`, `EMAIL_FROM` | Yes** | — | SMTP connection and sender |
+| `EMAIL_HOST`, `EMAIL_USERNAME`, `EMAIL_PASSWORD`, `EMAIL_FROM` | Yes** | — | SMTP server and sender |
 | `EMAIL_PORT` | No | `587` | SMTP port |
 | `EMAIL_ENABLE_SSL` | No | `true` | Enable SMTP TLS |
-| `EMAIL_SUBJECT` | No | `Purchase Request` | Default purchase email subject |
-| `PURCHASE_ACTION_BASE_URL` | Yes** | — | Public API URL used for approve/reject links |
-| `GROQ_API_KEY` | Yes*** | — | Enables the market assistant |
+| `EMAIL_SUBJECT` | No | `Purchase Request` | Default email subject |
+| `PURCHASE_ACTION_BASE_URL` | Yes** | — | Public approve/reject endpoint |
+| `GROQ_API_KEY` | Yes*** | — | Enable the market assistant |
 | `GROQ_MODEL` | No | `llama-3.1-8b-instant` | Groq model identifier |
 | `VITE_API_BASE_URL` | No | `http://localhost:8080` | Browser-facing API origin |
 
-- \* Configure either `DATABASE_URL` or the `POSTGRES_*` connection values.
-- \** Required for password reset, purchase-request email, and return notification workflows.
-- \*** Required only when using the market assistant.
+\* Configure `DATABASE_URL` or the individual `POSTGRES_*` values.<br />
+\** Required for email-based workflows.<br />
+\*** Required only for chat.
 
-## 🔌 API reference
+> Keep real database, SMTP, and API credentials out of Git. Store production secrets in the deployment platform.
 
-All successful and error responses are JSON unless the endpoint is an email action page.
+## API reference
 
 | Method | Endpoint | Description |
 | --- | --- | --- |
-| `GET` | `/health` | API health check |
+| `GET` | `/health` | Check API availability |
 | `POST` | `/api/companies/register` | Register a company |
-| `POST` | `/api/companies/login` | Sign in with registration number and password |
-| `POST` | `/api/companies/forgot-password` | Email a reset verification code |
+| `POST` | `/api/companies/login` | Sign in |
+| `POST` | `/api/companies/forgot-password` | Email a reset code |
 | `POST` | `/api/companies/verify-reset-code` | Verify a reset code |
 | `POST` | `/api/companies/reset-password` | Set a new password |
 | `GET`, `POST` | `/api/raw-materials` | List or create raw materials |
 | `GET`, `POST` | `/api/stock-intakes` | List or record incoming stock |
-| `GET`, `POST` | `/api/stock-issues` | List or issue stock using FIFO |
+| `GET`, `POST` | `/api/stock-issues` | List or issue FIFO stock |
 | `GET` | `/api/fifo?materialId=:id` | List available FIFO batches |
-| `GET`, `POST` | `/api/waste-stocks` | List or record wasted stock |
+| `GET`, `POST` | `/api/waste-stocks` | List or record waste |
 | `GET`, `POST` | `/api/return-stocks` | List or create supplier returns |
 | `GET` | `/api/return-stocks/batches?materialId=:id` | List returnable batches |
 | `GET`, `POST` | `/api/suppliers` | List/filter or create suppliers |
 | `GET`, `POST` | `/api/purchase-requests` | List or create purchase requests |
-| `GET` | `/api/purchase-requests/action` | Process an emailed approve/reject token |
-| `GET` | `/api/inventory-summary?date=YYYY-MM-DD` | Get a daily inventory summary |
+| `GET` | `/api/purchase-requests/action` | Process an approve/reject token |
+| `GET` | `/api/inventory-summary?date=YYYY-MM-DD` | Get one daily summary |
 | `GET` | `/api/inventory-summary?range=:range` | Get a summary range |
-| `POST` | `/api/chat` | Send a message to the market assistant |
+| `POST` | `/api/chat` | Ask the market assistant |
 
-## 🧪 Available scripts
+## Scripts
 
 | Location | Command | Description |
 | --- | --- | --- |
-| `frontend` | `npm run dev` | Start the Vite development server |
-| `frontend` | `npm run build` | Create a production frontend build |
-| `frontend` | `npm run preview` | Preview the production build locally |
+| `frontend` | `npm run dev` | Start Vite development mode |
+| `frontend` | `npm run build` | Build the production frontend |
+| `frontend` | `npm run preview` | Preview the frontend build |
 | `backend` | `npm start` | Start the Express API |
 
 No automated test or lint scripts are configured yet.
 
-## 🔐 Security notes
+## Security notes
 
-- Passwords are hashed with bcrypt before persistence.
+- Passwords are hashed with bcrypt before storage.
 - Purchase actions use UUID tokens with a seven-day expiry and one-time-use state.
 - Password reset codes expire after ten minutes.
-- The frontend currently stores the authenticated company only in React state; the API does not yet issue sessions or access tokens.
-- Add request authentication/authorization, strict CORS origins, rate limiting, input schemas, and security headers before production use.
-- The registration UI prepares image data, but the current company schema does not persist company images.
+- The frontend currently keeps the authenticated company only in React state; the API does not issue a session or access token.
+- Add authorization, strict CORS origins, request validation, rate limiting, and security headers before production use.
 
-## 🗺️ Roadmap
+## Roadmap
 
 - [ ] Add authenticated sessions and route protection
-- [ ] Complete Production, Sales, and Financials modules
-- [ ] Convert the schema snapshot into ordered, repeatable migrations
+- [ ] Complete Production, Sales, and Financials
+- [ ] Convert the schema snapshot into repeatable migrations
 - [ ] Add unit, integration, and end-to-end tests
 - [ ] Add validation, rate limiting, and audit logging
-- [ ] Add reporting exports and richer dashboard charts
+- [ ] Add reporting exports and richer charts
 - [ ] Add CI checks and deployment documentation
 
-## 🤝 Contributing
+## Contributing
 
 1. Create a focused branch from the default branch.
 2. Keep frontend and backend changes scoped and documented.
 3. Run `npm run build` in `frontend` and manually verify affected API workflows.
-4. Open a pull request describing the behavior change and test evidence.
+4. Open a pull request with the behavior change and verification evidence.
 
 ---
 
